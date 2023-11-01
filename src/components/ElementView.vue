@@ -31,7 +31,7 @@
       @ok="onSubmitCreateForm"
     >
       <a-form
-        :label-col="{ style: { width: '64px' } }"
+        :label-col="{ style: { width: '48px' } }"
         :model="createForm"
         layout="horizontal"
         name="form_in_modal"
@@ -43,13 +43,27 @@
           <a-input style="width: 280px" v-model:value="createForm.alias" />
         </a-form-item>
         <a-form-item name="icon" label="图标">
-          <a-upload name="file" list-type="picture-card" :show-upload-list="false">
-            <!-- <img v-if="imageUrl" :src="imageUrl" />
-            <div v-else> -->
-            <loading-outlined v-if="loading"></loading-outlined>
-            <upload-outlined v-else></upload-outlined>
-            <div style="font-size: 12px">上传图标</div>
-            <!-- </div> -->
+          <a-upload
+            name="file"
+            list-type="picture-card"
+            :file-list="fileList"
+            :show-upload-list="false"
+            :before-upload="beforeUpload"
+          >
+            <div v-if="filePath">
+              <img
+                style="width: 64px"
+                title="点击删除"
+                :src="'http://127.0.0.1:8080' + filePath"
+                @click.stop="onClickRemoveUpload"
+              />
+              <div style="font-size: 12px">点击删除</div>
+            </div>
+            <div v-else>
+              <loading-outlined v-if="uploading"></loading-outlined>
+              <upload-outlined v-else></upload-outlined>
+              <div style="font-size: 12px">{{ uploading ? '上传中...' : '上传图标' }}</div>
+            </div>
           </a-upload>
         </a-form-item>
         <a-form-item name="description" label="描述">
@@ -77,6 +91,9 @@
               {{ record.name }}
             </a>
           </template>
+          <template v-else-if="column.key === 'icon'">
+            <a-image :width="64" :src="'http://127.0.0.1:8080' + record.icon" />
+          </template>
           <template v-else-if="column.key === 'operation'">
             <span>
               <a-space wrap>
@@ -103,9 +120,9 @@
 </template>
 
 <script lang="ts" setup>
-import { message, Modal } from 'ant-design-vue'
+import { message, Modal, type UploadProps } from 'ant-design-vue'
 import { UploadOutlined, LoadingOutlined } from '@ant-design/icons-vue'
-import { h, onMounted, ref } from 'vue'
+import { h, onMounted, ref, watch } from 'vue'
 import router from '@/router'
 import ElementApi from '../api/element/element'
 
@@ -196,6 +213,38 @@ const columns = [
 
 const loading = ref<boolean>(true)
 
+const fileList = ref<UploadProps['fileList']>([])
+
+const uploading = ref<boolean>(false)
+
+const filePath = ref<string>('')
+
+watch(
+  () => fileList.value,
+  async (files) => {
+    if (files && files.length > 0) {
+      uploading.value = true
+      let resp
+      try {
+        resp = await ElementApi.upload(files[0])
+      } catch (error) {
+        uploading.value = false
+        fileList.value = []
+        message.error('上传失败')
+        return
+      }
+      uploading.value = false
+      fileList.value = []
+      if (resp.code === 200) {
+        message.success('上传成功')
+        filePath.value = resp.data
+      } else {
+        message.error(resp.data)
+      }
+    }
+  }
+)
+
 const createFormVisible = ref<boolean>(false)
 
 const createFormLoading = ref<boolean>(false)
@@ -230,10 +279,45 @@ async function get() {
   queryForm.value.page.total = resp.data.total
 }
 
+const beforeUpload: UploadProps['beforeUpload'] = (file) => {
+  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isJpgOrPng) {
+    message.error('请上传正确的图片格式')
+  }
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    message.error('图片过大')
+  }
+  if (!isJpgOrPng || !isLt2M) {
+    fileList.value = []
+  }
+  fileList.value = [...(fileList.value || []), file]
+  return false
+}
+
+const onClickRemoveUpload = async function () {
+  let resp
+  try {
+    resp = await ElementApi.removeUpload(filePath.value)
+  } catch (error) {
+    message.error('图片删除失败')
+    return
+  }
+  if (resp.code === 200) {
+    message.success('删除成功')
+    filePath.value = resp.data
+  } else {
+    message.error(resp.data)
+  }
+  filePath.value = ''
+  fileList.value = []
+}
+
 const onSubmitCreateForm = async function () {
   createFormLoading.value = true
   let resp
   try {
+    createForm.value.icon = filePath.value
     createForm.value.type = props.elementType ? props.elementType : ''
     resp = await ElementApi.create(createForm.value)
   } catch (error) {
@@ -256,6 +340,7 @@ const onSubmitCreateForm = async function () {
     ordered: null,
     type: null
   }
+  filePath.value = ''
   await get()
 }
 

@@ -32,7 +32,12 @@
       :confirm-loading="createFormLoading"
       @ok="onSubmitCreateForm"
     >
-      <a-form :model="createForm" layout="vertical" name="form_in_modal">
+      <a-form
+        :label-col="{ style: { width: '64px' } }"
+        :model="createForm"
+        layout="horizontal"
+        name="form_in_modal"
+      >
         <a-form-item name="name" label="服务名">
           <a-input v-model:value="createForm.name" />
         </a-form-item>
@@ -175,7 +180,7 @@ const columns = [
     }
   },
   {
-    title: '服务描述',
+    title: '描述',
     key: 'description',
     dataIndex: 'description',
     ellipsis: {

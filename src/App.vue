@@ -1,5 +1,6 @@
 <template>
   <a-config-provider
+    :locale="locale"
     :theme="{
       token: {
         borderRadius: '2px'
@@ -37,7 +38,14 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons-vue'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import AppMenu from './components/AppMenu.vue'
+
+dayjs.locale('zh-cn')
+
+const locale = ref(zhCN)
 
 const collapsed = ref<boolean>(false)
 

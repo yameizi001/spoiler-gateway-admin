@@ -56,6 +56,29 @@ class ElementApi {
   async getPageableElementList(form: Element.QueryForm) {
     return http.post('/elements/_query', undefined, form)
   }
+
+  async upload(file: any) {
+    return http.request({
+      url: '/file/upload',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      data: {
+        file: file
+      }
+    })
+  }
+
+  async removeUpload(path: string) {
+    return http.request({
+      url: '/file',
+      method: 'DELETE',
+      params: {
+        path: path
+      }
+    })
+  }
 }
 
 const elementApi = new ElementApi()

@@ -28,6 +28,17 @@ const router = createRouter({
       path: '/plugin/element/filter',
       name: 'plugin-filter',
       component: () => import('../views/FilterView.vue')
+    },
+    {
+      path: '/plugin/element/property/:elementId',
+      name: 'plugin-property',
+      props: true,
+      component: () => import('../views/PropertyView.vue')
+    },
+    {
+      path: '/plugin/metadata',
+      name: 'plugin-metadata',
+      component: () => import('../views/MetadataView.vue')
     }
   ]
 })

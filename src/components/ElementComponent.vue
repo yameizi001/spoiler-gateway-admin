@@ -195,7 +195,8 @@ const columns = [
     title: '图标',
     key: 'icon',
     dataIndex: 'icon',
-    width: 160
+    width: 160,
+    align: 'center'
   },
   {
     title: '顺序',

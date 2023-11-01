@@ -203,7 +203,8 @@ const columns = [
     title: '是否启用',
     key: 'enabled',
     dataIndex: 'enabled',
-    width: 120
+    width: 120,
+    align: 'center'
   },
   {
     title: '操作',

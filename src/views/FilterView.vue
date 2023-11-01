@@ -1,7 +1,7 @@
 <template>
-  <element-view :element-type="'FILTER'" />
+  <element-component :element-type="'FILTER'" />
 </template>
 
 <script lang="ts" setup>
-import ElementView from '../components/ElementView.vue'
+import ElementComponent from '../components/ElementComponent.vue'
 </script>

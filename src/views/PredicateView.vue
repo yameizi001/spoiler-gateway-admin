@@ -1,7 +1,7 @@
 <template>
-  <element-view :element-type="'PREDICATE'" />
+  <element-component :element-type="'PREDICATE'" />
 </template>
 
 <script lang="ts" setup>
-import ElementView from '../components/ElementView.vue'
+import ElementComponent from '../components/ElementComponent.vue'
 </script>

@@ -5,7 +5,7 @@
 <script lang="ts" setup>
 import PropertyComponent from '../components/PropertyComponent.vue'
 
-const props = defineProps({
+defineProps({
   elementId: String
 })
 </script>

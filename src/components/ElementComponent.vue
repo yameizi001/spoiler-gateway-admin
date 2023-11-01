@@ -281,15 +281,19 @@ async function get() {
 }
 
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-  if (!isJpgOrPng) {
+  const isImg =
+    file.type === 'image/jpeg' ||
+    file.type === 'image/png' ||
+    file.type === 'image/ico' ||
+    file.type === 'image/svg'
+  if (!isImg) {
     message.error('请上传正确的图片格式')
   }
   const isLt2M = file.size / 1024 / 1024 < 2
   if (!isLt2M) {
     message.error('图片过大')
   }
-  if (!isJpgOrPng || !isLt2M) {
+  if (!isImg || !isLt2M) {
     fileList.value = []
   }
   fileList.value = [...(fileList.value || []), file]

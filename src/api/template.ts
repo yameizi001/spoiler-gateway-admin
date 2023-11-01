@@ -1,0 +1,67 @@
+import http from '@/utils/request'
+
+export namespace Template {
+  export type Element = {
+    id: string
+    alias: string
+    properties: Property[]
+  }
+
+  export type Property = {
+    id: string
+    alias: string
+    values: string[]
+  }
+
+  export type CreateForm = {
+    name: string
+    description?: string | null
+    predicates?: Element[] | null
+    filters?: Element[] | null
+    metadata?: Property[] | null
+    type?: string | null
+  }
+
+  export type UpdateForm = {
+    id: string
+    name: string
+    description?: string | null
+    predicates?: Element[] | null
+    filters?: Element[] | null
+    metadata?: Property[] | null
+    type?: string | null
+  }
+
+  export type QueryForm = {
+    name?: string | null
+    type: string
+    page: {
+      num: number
+      size: number
+    }
+  }
+}
+
+class TemplateApi {
+  async create(form: Template.CreateForm) {
+    return http.post('/template', undefined, form)
+  }
+
+  async remove(id: string) {
+    return http.delete('/template', {
+      id: id
+    })
+  }
+
+  async edit(form: Template.UpdateForm) {
+    return http.put('/template', undefined, form)
+  }
+
+  async getPageableTemplateList(form: Template.QueryForm) {
+    return http.post('/templates/_query', undefined, form)
+  }
+}
+
+const templateApi = new TemplateApi()
+
+export default templateApi

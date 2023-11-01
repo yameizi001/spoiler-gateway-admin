@@ -55,7 +55,7 @@ const items: ItemType[] = reactive([
   getItem('插件管理', '/plugin', () => h(AppstoreAddOutlined), [
     getItem('断言器', '/plugin/element/predicate'),
     getItem('过滤器', '/plugin/element/filter'),
-    getItem('元数据', '/plugin/metadata')
+    getItem('路由元数据', '/plugin/metadata')
   ]),
   getItem('模板管理', '/template', () => h(CopyOutlined)),
   getItem('路由管理', '/route', () => h(NodeIndexOutlined))

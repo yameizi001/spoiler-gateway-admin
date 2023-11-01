@@ -59,7 +59,12 @@
       :confirm-loading="updateFormLoading"
       @ok="onSubmitUpdateForm"
     >
-      <a-form :model="updateForm" layout="vertical" name="form_in_modal">
+      <a-form
+        :label-col="{ style: { width: '64px' } }"
+        :model="updateForm"
+        layout="horizontal"
+        name="form_in_modal"
+      >
         <a-form-item name="name" label="服务名">
           <a-input v-model:value="updateForm.name" />
         </a-form-item>

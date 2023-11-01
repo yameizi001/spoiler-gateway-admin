@@ -39,6 +39,11 @@ const router = createRouter({
       path: '/plugin/metadata',
       name: 'plugin-metadata',
       component: () => import('../views/MetadataView.vue')
+    },
+    {
+      path: '/template',
+      name: 'template',
+      component: () => import('../views/TemplateView.vue')
     }
   ]
 })

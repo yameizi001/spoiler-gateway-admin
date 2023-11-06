@@ -150,7 +150,9 @@ async function get() {
   queryForm.value.page.total = resp.data.total
 }
 
-const onClickCreate = async function () {}
+const onClickCreate = async function () {
+  router.push('/template/workbench')
+}
 
 const onClickDelete = async function (id: string) {
   await TemplateApi.remove(id)
@@ -163,7 +165,9 @@ const onClickDelete = async function (id: string) {
   }
 }
 
-const onClickEdit = async function (record: TemplateRecord) {}
+const onClickEdit = async function (record: TemplateRecord) {
+  router.push('/template/workbench/' + record.id)
+}
 
 const onClickClearQueryForm = async function () {
   queryForm.value = {
@@ -180,7 +184,9 @@ const onClickQuery = async function () {
   await get()
 }
 
-const onClickTemplate = async function (record: TemplateRecord) {}
+const onClickTemplate = async function (record: TemplateRecord) {
+  router.push('/template/workbench/' + record.id)
+}
 
 const onClickMetadata = async function (record: TemplateRecord) {
   Modal.info({

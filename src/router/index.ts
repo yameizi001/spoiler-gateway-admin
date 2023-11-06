@@ -44,6 +44,12 @@ const router = createRouter({
       path: '/template',
       name: 'template',
       component: () => import('../views/TemplateView.vue')
+    },
+    {
+      path: '/template/workbench/:templateId?',
+      name: 'template-workbench',
+      props: true,
+      component: () => import('../components/TemplateWorkbench.vue')
     }
   ]
 })

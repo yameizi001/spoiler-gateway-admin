@@ -1,92 +1,86 @@
 <template>
-  <div class="item-wrapper">
-    <div class="primary-area">
-      <!-- icon -->
-      <img
-        style="width: 64px; height: 64px; border-radius: 50%"
+  <div class="element-wrapper">
+    <div
+      class="overview-wrapper"
+      :class="!contentVisible ? 'overview-wrapper-border' : 'overview-wrapper-background'"
+      @click.stop="() => (contentVisible = !contentVisible)"
+    >
+      <a-image
+        width="48px"
+        height="48px"
+        class="icon-img"
+        :preview="false"
         :src="'http://127.0.0.1:8080' + element.icon"
       />
-      <!-- info -->
       <div class="primary-info">
-        <div
-          style="font-weight: 600; padding-left: 6px"
-          :title="element.alias ? element.alias : '暂无别名'"
-        >
-          {{ element.alias ? element.alias : '暂无别名' }}
+        <div class="primary-info-item" style="font-weight: bold">{{ element.alias }}</div>
+        <div class="primary-info-item">
+          <a>{{ element.name }}</a>
         </div>
-        <a style="padding: 6px" :title="element.name">{{ element.name }}</a>
-        <div
-          style="margin-top: 4px"
-          :title="element.ordered ? element.ordered.toString() : '无优先级'"
-        >
-          <!-- {{ element.ordered ? element.ordered : '无优先级' }} -->
-          <a-tag :color="element.ordered ? 'success' : 'warning'" :bordered="false">
-            {{ element.ordered ? element.ordered : 'None' }}
-          </a-tag>
-        </div>
+        <a-tag :color="element.ordered ? 'success' : 'warning'" :bordered="false">
+          {{ element.ordered ? element.ordered : 'None' }}
+        </a-tag>
       </div>
     </div>
-    <!-- description -->
-    <div
-      class="description"
-      :title="element.description ? element.description : '该组件没有描述信息'"
-    >
-      {{ element.description ? element.description : '该组件没有描述信息' }}
+    <div class="detail-wrapper" v-if="contentVisible">
+      {{ element.description }}
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-defineProps<{
-  element: {
-    id: string
-    name: string
-    alias?: string | null
-    icon: string
-    description?: string | null
-    ordered?: number | null
-    type: string
-  }
-}>()
+import { ref } from 'vue'
+
+defineProps({
+  element: null
+})
+
+const contentVisible = ref(false)
 </script>
 
 <style scoped>
-.item-wrapper {
-  width: 192px;
-  height: 144px;
-  margin: 0 5px;
-  padding: 8px;
-  cursor: pointer;
-  background-color: white;
+.element-wrapper {
+  display: flex;
+  flex-direction: column;
 }
 
-.primary-area {
-  height: 80px;
+.overview-wrapper {
+  flex: 1;
+  cursor: pointer;
   display: flex;
   flex-direction: row;
+  align-items: center;
+  padding: 16px;
+}
+
+.overview-wrapper-background {
+  background-color: #f9f9f9;
+}
+
+.overview-wrapper-border {
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .primary-info {
-  width: 112px;
-  height: 64px;
+  display: flex;
+  flex-direction: column;
+  margin-left: 12px;
 }
 
-.primary-info > div,
-a {
-  height: 20px;
-  line-height: 20px;
-  margin: 0px 0px 2px 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.primary-info-item {
+  cursor: pointer;
+  flex: 1;
+  margin: 2px 0 2px 6px;
 }
 
-.description {
-  height: 48px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+.primary-info-item:hover {
+  color: #5297ff;
+}
+
+.detail-wrapper {
+  flex: 1;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
 }
 </style>

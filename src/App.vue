@@ -77,8 +77,8 @@ const title = computed(() => {
 }
 
 .content-layout {
-  margin: 12px 12px;
-  padding: 12px;
+  margin: 5px 4px;
+  padding: 6px;
   background-color: white;
 }
 </style>

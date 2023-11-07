@@ -10,8 +10,8 @@
           <down-outlined />
         </template>
       </div>
-      <transition name="item-content-active">
-        <div class="item-content-active" v-show="activeKey === index">
+      <transition name="item-content">
+        <div class="item-content" v-show="activeKey === index">
           <slot :name="`item_${index}`"></slot>
         </div>
       </transition>
@@ -62,18 +62,18 @@ const onClickTitle = async function (index: number) {
   border-radius: 4px;
 }
 
-.item-content-active {
+.item-content {
   flex: 1;
   overflow: hidden;
   padding: 4px;
   transition: flex 0.2s ease;
 }
 
-.item-content-active-enter-active {
+.item-content-enter-active {
   flex: 1;
 }
 
-.item-content-active-leave-active {
+.item-content-leave-active {
   flex: 0;
 }
 </style>

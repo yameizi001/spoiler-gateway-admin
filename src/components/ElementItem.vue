@@ -2,8 +2,8 @@
   <div class="element-wrapper">
     <div
       class="overview-wrapper"
-      :class="!contentVisible ? 'overview-wrapper-border' : 'overview-wrapper-background'"
-      @click.stop="() => (contentVisible = !contentVisible)"
+      :class="!visible ? 'overview-wrapper-border' : 'overview-wrapper-background'"
+      @click.stop="() => (visible = !visible)"
     >
       <a-image
         width="48px"
@@ -22,20 +22,31 @@
         </a-tag>
       </div>
     </div>
-    <div class="detail-wrapper" v-if="contentVisible">
+    <div class="detail-wrapper" v-if="visible">
       {{ element.description }}
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, type PropType } from 'vue'
+
+interface Record {
+  name: string
+  alias: string
+  description?: string | null
+  icon: string
+  ordered?: number | null
+}
 
 defineProps({
-  element: null
+  element: {
+    type: Object as PropType<Record>,
+    required: true
+  }
 })
 
-const contentVisible = ref(false)
+const visible = ref(false)
 </script>
 
 <style scoped>

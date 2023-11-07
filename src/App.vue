@@ -65,6 +65,7 @@ const title = computed(() => {
   line-height: 48px;
   text-align: center;
   font-size: medium;
+  font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
 }

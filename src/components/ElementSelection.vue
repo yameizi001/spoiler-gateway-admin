@@ -38,7 +38,7 @@
         item-key="id"
       >
         <template #item="{ element }">
-          <element-item :element="element" />
+          <selection-element-item :element="element" />
         </template>
       </draggable>
     </div>
@@ -51,7 +51,7 @@ import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import draggable from 'vuedraggable'
 import ElementApi from '../api/element/element'
-import ElementItem from './ElementItem.vue'
+import SelectionElementItem from './SelectionElementItem.vue'
 
 const props = defineProps({
   elementType: {

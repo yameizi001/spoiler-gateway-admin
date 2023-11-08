@@ -9,58 +9,111 @@
           <template #item_1>
             <element-selection style="width: 100%" element-type="FILTER" />
           </template>
-          <template #item_2>
-            <element-selection style="width: 100%" element-type="FILTER" />
-          </template>
+          <template #item_2> </template>
         </accordion-sidebar>
       </div>
     </div>
-    <div class="operation-wrapper" @click="() => (formVisible = !formVisible)">
+    <div class="operation-wrapper">
+      <a-form
+        id="operationForm"
+        style="padding: 24px 12px; height: calc(100% - 48px); overflow-y: auto"
+        name="basic"
+        :model="templateUpsertForm"
+        :label-col="{ style: { width: '64px' } }"
+        autocomplete="off"
+      >
+        <a-form-item id="templateUpsertFormName" label="模板名: " name="name">
+          <a-input style="width: 320px" v-model:value="templateUpsertForm.name" />
+        </a-form-item>
+        <a-form-item id="templateUpsertFormDescription" label="描述: " name="description">
+          <a-textarea
+            style="width: 480px"
+            :rows="2"
+            v-model:value="templateUpsertForm.description"
+          />
+        </a-form-item>
+        <a-form-item id="templateUpsertFormPredicates" label="断言器: " name="predicates">
+          <div style="width: 80%" class="operation-draggable-wrapper">
+            <draggable
+              class="operation-draggable"
+              animation="500"
+              :list="templateUpsertForm.predicates"
+              group="PREDICATE"
+              item-key="id"
+            >
+              <template #item="{ element }">
+                <operation-element-item
+                  :element="element"
+                  @updateElementProperties="updateElementProperties"
+                  @click="onClickOperationElementItem(element)"
+                />
+              </template>
+            </draggable>
+          </div>
+        </a-form-item>
+        <a-form-item id="templateUpsertFormFilters" label="过滤器: " name="filters">
+          <div style="width: 80%" class="operation-draggable-wrapper">
+            <draggable
+              class="operation-draggable"
+              animation="500"
+              :list="templateUpsertForm.filters"
+              group="FILTER"
+              item-key="id"
+            >
+              <template #item="{ element }">
+                <operation-element-item
+                  :element="element"
+                  @updateElementProperties="updateElementProperties"
+                  @click="onClickOperationElementItem(element)"
+                />
+              </template>
+            </draggable>
+          </div>
+        </a-form-item>
+        <a-form-item id="templateUpsertFormMetadata" label="元数据: " name="metadata">
+          <div style="width: 60%" class="operation-draggable-wrapper"></div>
+        </a-form-item>
+      </a-form>
+      <div class="operation-button-wrapper">
+        <a-button type="link">完成</a-button>
+        <a-button type="link" danger>清空</a-button>
+      </div>
       <div class="affix-wrapper">
         <a-affix :offset-top="0">
-          <a-anchor
-            :items="[
-              {
-                key: 'part-1',
-                href: '#part-1',
-                title: '断言器'
-              },
-              {
-                key: 'part-2',
-                href: '#part-2',
-                title: '过滤器'
-              },
-              {
-                key: 'part-3',
-                href: '#part-3',
-                title: '元数据'
-              }
-            ]"
-          />
+          <a-anchor :getContainer="getContainer" :items="anchorItem" />
         </a-affix>
       </div>
       <div
         class="form-wrapper-mask"
         v-show="formVisible"
-        @click="() => (formVisible = false)"
+        @click.stop="() => (formVisible = false)"
       ></div>
     </div>
     <transition name="form-wrapper">
-      <div class="form-wrapper" v-show="formVisible"></div>
+      <div class="form-wrapper" v-show="formVisible">
+        <div>配置属性...</div>
+        <template v-for="item in configuredElement.properties" :key="item.id">
+          <div>{{ item.alias }}</div>
+          <a-input style="width: 320px" v-model:value="item.values" />
+        </template>
+        <div @click="onSubmitElementPropertiesForm">完成</div>
+      </div>
     </transition>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
+import draggable from 'vuedraggable'
 import AccordionSidebar from './AccordionSidebar.vue'
 import ElementSelection from './ElementSelection.vue'
+import OperationElementItem from './OperationElementItem.vue'
 
 defineProps({
   templateId: String
 })
 
-const selectionCategory = ref([
+const selectionCategory = [
   {
     title: '断言器',
     key: 'PREDICATE'
@@ -73,11 +126,64 @@ const selectionCategory = ref([
     title: '元数据',
     key: 'METADATA'
   }
+]
+
+const anchorItem = ref([
+  {
+    key: 'name',
+    href: '#templateUpsertFormName',
+    title: '模板名称'
+  },
+  {
+    key: 'description',
+    href: '#templateUpsertFormDescription',
+    title: '描述'
+  },
+  {
+    key: 'predicates',
+    href: '#templateUpsertFormPredicates',
+    title: '断言器列表'
+  },
+  {
+    key: 'filters',
+    href: '#templateUpsertFormFilters',
+    title: '过滤器列表'
+  },
+  {
+    key: 'metadata',
+    href: '#templateUpsertFormMetadata',
+    title: '元数据列表'
+  }
 ])
 
-const predicates = ref([])
-
 const formVisible = ref(false)
+
+const templateUpsertForm = ref({
+  name: null,
+  description: null,
+  predicates: [],
+  filters: [],
+  metadata: []
+})
+
+const configuredElement = ref([])
+
+const getContainer = function () {
+  return document.querySelector('#operationForm')
+}
+
+const updateElementProperties = async function (element: any, properties: any) {
+  element.properties = properties
+}
+
+const onClickOperationElementItem = async function (element: any) {
+  formVisible.value = true
+  configuredElement.value = element
+}
+
+const onSubmitElementPropertiesForm = async function () {
+  console.log(templateUpsertForm.value)
+}
 </script>
 
 <style scoped>
@@ -106,13 +212,49 @@ const formVisible = ref(false)
 }
 
 .operation-wrapper {
+  position: relative;
   flex: 1;
   background-color: #f5f5f5;
 }
 
+.operation-draggable-wrapper {
+  height: 460px;
+  max-height: 460px;
+  min-height: 460px;
+  border: 1px dashed grey;
+  margin: 4px 0;
+  padding: 20px;
+}
+
+.operation-draggable {
+  height: 415px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
 .affix-wrapper {
-  float: right;
+  position: absolute;
+  top: 0;
+  right: 0;
   padding: 8px 32px 0 0;
+}
+
+.operation-button-wrapper {
+  width: 100%;
+  height: 48px;
+  line-height: 48px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-flow: row-reverse;
+  align-items: center;
+  padding: 0 12px;
+  border-top: 2px solid white;
 }
 
 .form-wrapper-mask {

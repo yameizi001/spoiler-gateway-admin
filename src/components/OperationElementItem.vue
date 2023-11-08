@@ -33,7 +33,7 @@ import { h, onMounted, ref, type PropType, watch } from 'vue'
 import { CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import ProPertyApi from '../api/element/property'
 
-interface ElementRecord {
+export interface ElementRecord {
   id: string
   name: string
   alias: string
@@ -44,7 +44,7 @@ interface ElementRecord {
   properties?: PropertyRecord[] | null
 }
 
-interface PropertyRecord {
+export interface PropertyRecord {
   id: string
   elementId?: string | null
   key: string
@@ -52,7 +52,7 @@ interface PropertyRecord {
   description?: string | null
   required: boolean
   regex?: string | null
-  values?: string[] | null
+  values?: string | null
 }
 
 const emit = defineEmits(['updateElementProperties'])
@@ -82,22 +82,20 @@ watch(
   (properties) => {
     console.log(properties)
     let hasReturned = false
-    properties?.forEach((value) => {
-      const values = value.values
-      if (!values && value.required) {
+    properties?.forEach((property) => {
+      const values = property.values
+      if (!values && property.required) {
         valid.value = false
         hasReturned = true
         return
       }
-      if (value.regex) {
-        const regex = new RegExp(value.regex)
-        values?.forEach((val) => {
-          if (!regex.test(val)) {
-            valid.value = false
-            hasReturned = true
-            return
-          }
-        })
+      if (property.regex) {
+        const regex = new RegExp(property.regex)
+        if (!regex.test(values!)) {
+          valid.value = false
+          hasReturned = true
+          return
+        }
       }
       if (hasReturned) {
         return

@@ -36,6 +36,7 @@
         :list="data"
         :group="{ name: elementType, pull: 'clone', put: false }"
         item-key="id"
+        :clone="deepClone"
       >
         <template #item="{ element }">
           <selection-element-item :element="element" />
@@ -89,6 +90,10 @@ async function get() {
   const resp = await ElementApi.getPageableElementList(queryForm.value)
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
+}
+
+function deepClone(item: any) {
+  return JSON.parse(JSON.stringify(item))
 }
 
 const onClickPrev = async function () {

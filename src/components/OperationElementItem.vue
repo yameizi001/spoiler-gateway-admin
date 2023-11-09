@@ -47,12 +47,12 @@ export interface ElementRecord {
 export interface PropertyRecord {
   id: string
   elementId?: string | null
-  key: string
+  key?: string | null
   alias: string
   description?: string | null
   required: boolean
   regex?: string | null
-  values?: string | null
+  values: string[]
 }
 
 const emit = defineEmits(['updateElementProperties'])
@@ -65,6 +65,9 @@ const props = defineProps({
 })
 
 onMounted(async () => {
+  if (props.element.properties) {
+    return
+  }
   const resp = await ProPertyApi.getPageablePropertyList({
     elementId: props.element.id,
     page: {
@@ -80,7 +83,6 @@ const valid = ref(false)
 watch(
   () => props.element.properties,
   (properties) => {
-    console.log(properties)
     let hasReturned = false
     properties?.forEach((property) => {
       const values = property.values
@@ -91,11 +93,21 @@ watch(
       }
       if (property.regex) {
         const regex = new RegExp(property.regex)
-        if (!regex.test(values!)) {
-          valid.value = false
-          hasReturned = true
-          return
-        }
+        values.forEach((value) => {
+          if ((property.required && !value) || !regex.test(value)) {
+            valid.value = false
+            hasReturned = true
+            return
+          }
+        })
+      } else {
+        values.forEach((value) => {
+          if (property.required && !value) {
+            valid.value = false
+            hasReturned = true
+            return
+          }
+        })
       }
       if (hasReturned) {
         return

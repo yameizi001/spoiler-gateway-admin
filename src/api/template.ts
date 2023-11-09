@@ -60,6 +60,12 @@ class TemplateApi {
   async getPageableTemplateList(form: Template.QueryForm) {
     return http.post('/templates/_query', undefined, form)
   }
+
+  async getTemplateDetail(id: string) {
+    return http.get('/template', {
+      id: id
+    })
+  }
 }
 
 const templateApi = new TemplateApi()

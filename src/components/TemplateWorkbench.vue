@@ -22,16 +22,18 @@
         :label-col="{ style: { width: '64px' } }"
         autocomplete="off"
       >
-        <a-form-item id="templateUpsertFormName" label="模板名: " name="name">
-          <a-input style="width: 320px" v-model:value="templateUpsertForm.name" />
-        </a-form-item>
-        <a-form-item id="templateUpsertFormDescription" label="描述: " name="description">
-          <a-textarea
-            style="width: 480px"
-            :rows="2"
-            v-model:value="templateUpsertForm.description"
-          />
-        </a-form-item>
+        <template v-if="props.templateType === 'TEMPLATED'">
+          <a-form-item id="templateUpsertFormName" label="模板名: " name="name">
+            <a-input style="width: 320px" v-model:value="templateUpsertForm.name" />
+          </a-form-item>
+          <a-form-item id="templateUpsertFormDescription" label="描述: " name="description">
+            <a-textarea
+              style="width: 480px"
+              :rows="2"
+              v-model:value="templateUpsertForm.description"
+            />
+          </a-form-item>
+        </template>
         <a-form-item id="templateUpsertFormPredicates" label="断言器: " name="predicates">
           <div style="width: 80%" class="operation-draggable-wrapper">
             <draggable
@@ -91,10 +93,37 @@
     </div>
     <transition name="form-wrapper">
       <div class="form-wrapper" v-show="formVisible">
-        <div>配置属性...</div>
-        <template v-for="item in configuredElement.properties" :key="item.id">
-          <div>{{ item.alias }}</div>
-          <a-input style="width: 320px" v-model:value="item.values" />
+        <div style="text-align: center; font-weight: 600; padding: 12px">
+          配置{{ configuredElement ? ' [' + configuredElement.alias + '] ' : '组件' }}属性
+        </div>
+        <template v-if="configuredElement">
+          <a-form
+            style="margin-top: 12px"
+            name="basic"
+            :label-col="{
+              style: {
+                width: '128px'
+              }
+            }"
+            autocomplete="off"
+          >
+            <template v-for="(property, index) in configuredElement.properties" :key="index">
+              <a-form-item :label="property.alias" name="index">
+                <template v-for="(propertyValue, innerIndex) in property.values" :key="innerIndex">
+                  <a-input
+                    style="width: 240px; margin-bottom: 12px"
+                    v-model:value="property.values[innerIndex]"
+                  />
+                  <a-button
+                    type="link"
+                    :icon="h(PlusCircleOutlined)"
+                    v-show="!property.key && innerIndex === property.values.length - 1"
+                    @click="onClickAddArrayProperty(property)"
+                  />
+                </template>
+              </a-form-item>
+            </template>
+          </a-form>
         </template>
         <div @click="onSubmitElementPropertiesForm">完成</div>
       </div>
@@ -103,14 +132,58 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, h, onMounted } from 'vue'
+import { message } from 'ant-design-vue'
+import { PlusCircleOutlined } from '@ant-design/icons-vue'
 import draggable from 'vuedraggable'
 import AccordionSidebar from './AccordionSidebar.vue'
 import ElementSelection from './ElementSelection.vue'
 import OperationElementItem from './OperationElementItem.vue'
+import TemplateApi from '../api/template'
 
-defineProps({
-  templateId: String
+export interface ElementRecord {
+  id: string
+  name: string
+  alias: string
+  description?: string | null
+  icon: string
+  ordered?: number | null
+  type: string
+  properties: PropertyRecord[]
+}
+
+export interface PropertyRecord {
+  id: string
+  elementId?: string | null
+  key?: string | null
+  alias: string
+  description?: string | null
+  required: boolean
+  regex?: string | null
+  values: string[]
+}
+
+const props = defineProps({
+  templateId: String,
+  templateType: {
+    type: String,
+    required: false,
+    default: 'TEMPLATED'
+  }
+})
+
+async function get() {
+  if (props.templateId) {
+    const resp = await TemplateApi.getTemplateDetail(props.templateId)
+    templateUpsertForm.value = resp.data
+  }
+}
+
+onMounted(async () => {
+  if (props.templateType !== 'TEMPLATED') {
+    anchorItem.value.splice(0, 2)
+  }
+  await get()
 })
 
 const selectionCategory = [
@@ -158,31 +231,51 @@ const anchorItem = ref([
 
 const formVisible = ref(false)
 
-const templateUpsertForm = ref({
-  name: null,
+const templateUpsertForm = ref<{
+  name: string
+  description?: string | null
+  predicates: ElementRecord[]
+  filters: ElementRecord[]
+  metadata: PropertyRecord[]
+  type: string
+}>({
+  name: '',
   description: null,
   predicates: [],
   filters: [],
-  metadata: []
+  metadata: [],
+  type: 'TEMPLATED'
 })
 
-const configuredElement = ref([])
+const configuredElement = ref<ElementRecord>()
 
 const getContainer = function () {
   return document.querySelector('#operationForm')
 }
 
-const updateElementProperties = async function (element: any, properties: any) {
+const updateElementProperties = async function (
+  element: ElementRecord,
+  properties: PropertyRecord[]
+) {
+  properties.forEach((property) => {
+    property.values = ['']
+  })
   element.properties = properties
 }
 
-const onClickOperationElementItem = async function (element: any) {
+const onClickOperationElementItem = async function (element: ElementRecord) {
   formVisible.value = true
   configuredElement.value = element
 }
 
+const onClickAddArrayProperty = async function (property: PropertyRecord) {
+  property.values.push('')
+}
+
 const onSubmitElementPropertiesForm = async function () {
-  console.log(templateUpsertForm.value)
+  templateUpsertForm.value.type = props.templateType
+  await TemplateApi.create(templateUpsertForm.value)
+  message.success('模板编辑成功')
 }
 </script>
 
@@ -260,13 +353,13 @@ const onSubmitElementPropertiesForm = async function () {
 .form-wrapper-mask {
   position: fixed;
   left: 0;
-  right: 400px;
+  right: 480px;
   top: 0;
   bottom: 0;
 }
 
 .form-wrapper {
-  width: 384px;
+  width: 448px;
   height: 100%;
   transition: width 0.2s ease;
 }

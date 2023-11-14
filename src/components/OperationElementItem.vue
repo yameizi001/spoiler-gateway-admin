@@ -8,7 +8,13 @@
       :icon="h(ExclamationCircleOutlined)"
       v-show="!valid"
     />
-    <a-button class="close-button" type="link" danger :icon="h(CloseCircleOutlined)" />
+    <a-button
+      class="close-button"
+      type="link"
+      danger
+      :icon="h(CloseCircleOutlined)"
+      @click.stop="onRemoveItem(element, index)"
+    />
     <a-image
       width="48px"
       height="48px"
@@ -55,11 +61,15 @@ export interface PropertyRecord {
   values: string[]
 }
 
-const emit = defineEmits(['updateElementProperties'])
+const emit = defineEmits(['updateElementProperties', 'removeItem'])
 
 const props = defineProps({
   element: {
     type: Object as PropType<ElementRecord>,
+    required: true
+  },
+  index: {
+    type: Number,
     required: true
   }
 })
@@ -118,6 +128,10 @@ watch(
     }
   }
 )
+
+const onRemoveItem = async function (element: ElementRecord, index: number) {
+  emit('removeItem', element, index)
+}
 </script>
 
 <style scoped>

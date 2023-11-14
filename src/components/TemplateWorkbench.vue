@@ -9,7 +9,9 @@
           <template #item_1>
             <element-selection style="width: 100%" element-type="FILTER" />
           </template>
-          <template #item_2> </template>
+          <template #item_2>
+            <property-selection style="width: 100%" />
+          </template>
         </accordion-sidebar>
       </div>
     </div>
@@ -43,10 +45,12 @@
               group="PREDICATE"
               item-key="id"
             >
-              <template #item="{ element }">
+              <template #item="{ element, index }">
                 <operation-element-item
                   :element="element"
+                  :index="index"
                   @updateElementProperties="updateElementProperties"
+                  @removeItem="removeOperationElementItem"
                   @click="onClickOperationElementItem(element)"
                 />
               </template>
@@ -62,10 +66,12 @@
               group="FILTER"
               item-key="id"
             >
-              <template #item="{ element }">
+              <template #item="{ element, index }">
                 <operation-element-item
                   :element="element"
+                  :index="index"
                   @updateElementProperties="updateElementProperties"
+                  @removeItem="removeOperationElementItem"
                   @click="onClickOperationElementItem(element)"
                 />
               </template>
@@ -73,12 +79,41 @@
           </div>
         </a-form-item>
         <a-form-item id="templateUpsertFormMetadata" label="元数据: " name="metadata">
-          <div style="width: 60%" class="operation-draggable-wrapper"></div>
+          <div style="width: 60%" class="operation-draggable-wrapper">
+            <draggable
+              style="flex-direction: column"
+              class="operation-draggable"
+              animation="500"
+              :list="templateUpsertForm.metadata"
+              group="PROPERTY"
+              @change="onChangeMetadataDraggableItem"
+              item-key="id"
+            >
+              <template #item="{ element, index }">
+                <div class="metadata-item-wrapper">
+                  <a-form-item :label="element.alias" name="index">
+                    <template v-for="(metadataValue, index) in element.values" :key="index">
+                      <a-input
+                        style="width: 240px; margin: 0 12px"
+                        v-model:value="element.values[index]"
+                      />
+                    </template>
+                    <a-button
+                      danger
+                      type="link"
+                      :icon="h(MinusCircleOutlined)"
+                      @click="onClickDeleteMetadataItem(index)"
+                    />
+                  </a-form-item>
+                </div>
+              </template>
+            </draggable>
+          </div>
         </a-form-item>
       </a-form>
       <div class="operation-button-wrapper">
-        <a-button type="link">完成</a-button>
-        <a-button type="link" danger>清空</a-button>
+        <a-button type="link" @click="onSubmitElementPropertiesForm">完成</a-button>
+        <a-button type="link" danger @click="onClearElementPropertiesForm">清空</a-button>
       </div>
       <div class="affix-wrapper">
         <a-affix :offset-top="0">
@@ -88,7 +123,11 @@
       <div
         class="form-wrapper-mask"
         v-show="formVisible"
-        @click.stop="() => (formVisible = false)"
+        @click.stop="
+          () => {
+            formVisible = false
+          }
+        "
       ></div>
     </div>
     <transition name="form-wrapper">
@@ -114,18 +153,26 @@
                     style="width: 240px; margin-bottom: 12px"
                     v-model:value="property.values[innerIndex]"
                   />
-                  <a-button
-                    type="link"
-                    :icon="h(PlusCircleOutlined)"
-                    v-show="!property.key && innerIndex === property.values.length - 1"
-                    @click="onClickAddArrayProperty(property)"
-                  />
+                  <template v-if="!property.key && innerIndex !== property.values.length - 1">
+                    <a-button
+                      danger
+                      type="link"
+                      :icon="h(MinusCircleOutlined)"
+                      @click="onClickDeleteArrayProperty(property.values, innerIndex)"
+                    />
+                  </template>
+                  <template v-else-if="!property.key && innerIndex === property.values.length - 1">
+                    <a-button
+                      type="link"
+                      :icon="h(PlusCircleOutlined)"
+                      @click="onClickAddArrayProperty(property)"
+                    />
+                  </template>
                 </template>
               </a-form-item>
             </template>
           </a-form>
         </template>
-        <div @click="onSubmitElementPropertiesForm">完成</div>
       </div>
     </transition>
   </div>
@@ -133,11 +180,13 @@
 
 <script lang="ts" setup>
 import { ref, h, onMounted } from 'vue'
+import router from '@/router'
 import { message } from 'ant-design-vue'
-import { PlusCircleOutlined } from '@ant-design/icons-vue'
+import { PlusCircleOutlined, MinusCircleOutlined } from '@ant-design/icons-vue'
 import draggable from 'vuedraggable'
 import AccordionSidebar from './AccordionSidebar.vue'
 import ElementSelection from './ElementSelection.vue'
+import PropertySelection from './PropertySelection.vue'
 import OperationElementItem from './OperationElementItem.vue'
 import TemplateApi from '../api/template'
 
@@ -232,6 +281,7 @@ const anchorItem = ref([
 const formVisible = ref(false)
 
 const templateUpsertForm = ref<{
+  id: string
   name: string
   description?: string | null
   predicates: ElementRecord[]
@@ -239,6 +289,7 @@ const templateUpsertForm = ref<{
   metadata: PropertyRecord[]
   type: string
 }>({
+  id: '',
   name: '',
   description: null,
   predicates: [],
@@ -263,6 +314,15 @@ const updateElementProperties = async function (
   element.properties = properties
 }
 
+const removeOperationElementItem = async function (element: ElementRecord, index: number) {
+  const type = element.type
+  if (type == 'PREDICATE') {
+    templateUpsertForm.value.predicates.splice(index, 1)
+  } else if (type == 'FILTER') {
+    templateUpsertForm.value.filters.splice(index, 1)
+  }
+}
+
 const onClickOperationElementItem = async function (element: ElementRecord) {
   formVisible.value = true
   configuredElement.value = element
@@ -272,10 +332,51 @@ const onClickAddArrayProperty = async function (property: PropertyRecord) {
   property.values.push('')
 }
 
+const onClickDeleteArrayProperty = async function (properties: string[], index: number) {
+  properties.splice(index, 1)
+}
+
+const onChangeMetadataDraggableItem = async function () {
+  const metadata = templateUpsertForm.value.metadata
+  const seenIds: Record<string, boolean> = {}
+  templateUpsertForm.value.metadata = metadata.filter((item) => {
+    if (seenIds[item.id]) {
+      message.error('已经添加了这个属性')
+      return false
+    } else {
+      seenIds[item.id] = true
+      return true
+    }
+  })
+}
+
+const onClickDeleteMetadataItem = async function (index: number) {
+  const metadata = templateUpsertForm.value.metadata
+  metadata.splice(index, 1)
+}
+
+const onClearElementPropertiesForm = async function () {
+  templateUpsertForm.value = {
+    id: '',
+    name: '',
+    description: null,
+    predicates: [],
+    filters: [],
+    metadata: [],
+    type: templateUpsertForm.value.type
+  }
+}
+
 const onSubmitElementPropertiesForm = async function () {
   templateUpsertForm.value.type = props.templateType
-  await TemplateApi.create(templateUpsertForm.value)
+  if (props.templateId) {
+    templateUpsertForm.value.id = props.templateId
+    await TemplateApi.edit(templateUpsertForm.value)
+  } else {
+    await TemplateApi.create(templateUpsertForm.value)
+  }
   message.success('模板编辑成功')
+  router.back()
 }
 </script>
 
@@ -328,6 +429,24 @@ const onSubmitElementPropertiesForm = async function () {
   align-content: flex-start;
 }
 
+.metadata-item-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.metadata-item-label {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 120px;
+}
+
+.metadata-item-label::after {
+  content: ': ';
+}
+
 .affix-wrapper {
   position: absolute;
   top: 0;
@@ -361,6 +480,7 @@ const onSubmitElementPropertiesForm = async function () {
 .form-wrapper {
   width: 448px;
   height: 100%;
+  overflow-y: auto;
   transition: width 0.2s ease;
 }
 

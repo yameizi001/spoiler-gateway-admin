@@ -126,7 +126,8 @@ watch(
     if (!hasReturned) {
       valid.value = true
     }
-  }
+  },
+  { deep: true }
 )
 
 const onRemoveItem = async function (element: ElementRecord, index: number) {

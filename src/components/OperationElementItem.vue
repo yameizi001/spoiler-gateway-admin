@@ -76,6 +76,7 @@ const props = defineProps({
 
 onMounted(async () => {
   if (props.element.properties) {
+    validProperties(props.element.properties)
     return
   }
   const resp = await ProPertyApi.getPageablePropertyList({
@@ -88,47 +89,51 @@ onMounted(async () => {
   emit('updateElementProperties', props.element, resp.data.records)
 })
 
-const valid = ref(false)
+const valid = ref(true)
 
 watch(
   () => props.element.properties,
   (properties) => {
-    let hasReturned = false
-    properties?.forEach((property) => {
-      const values = property.values
-      if (!values && property.required) {
-        valid.value = false
-        hasReturned = true
-        return
-      }
-      if (property.regex) {
-        const regex = new RegExp(property.regex)
-        values.forEach((value) => {
-          if ((property.required && !value) || !regex.test(value)) {
-            valid.value = false
-            hasReturned = true
-            return
-          }
-        })
-      } else {
-        values.forEach((value) => {
-          if (property.required && !value) {
-            valid.value = false
-            hasReturned = true
-            return
-          }
-        })
-      }
-      if (hasReturned) {
-        return
-      }
-    })
-    if (!hasReturned) {
-      valid.value = true
-    }
+    validProperties(properties)
   },
   { deep: true }
 )
+
+function validProperties(properties?: PropertyRecord[] | null) {
+  let hasReturned = false
+  properties?.forEach((property) => {
+    const values = property.values
+    if (!values && property.required) {
+      valid.value = false
+      hasReturned = true
+      return
+    }
+    if (property.regex) {
+      const regex = new RegExp(property.regex)
+      values.forEach((value) => {
+        if ((property.required && !value) || !regex.test(value)) {
+          valid.value = false
+          hasReturned = true
+          return
+        }
+      })
+    } else {
+      values.forEach((value) => {
+        if (property.required && !value) {
+          valid.value = false
+          hasReturned = true
+          return
+        }
+      })
+    }
+    if (hasReturned) {
+      return
+    }
+  })
+  if (!hasReturned) {
+    valid.value = true
+  }
+}
 
 const onRemoveItem = async function (element: ElementRecord, index: number) {
   emit('removeItem', element, index)

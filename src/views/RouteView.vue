@@ -8,10 +8,70 @@
             <a-input allowClear v-model:value="queryForm.name" placeholder="请输入路由名" />
           </a-form-item>
           <a-form-item label="服务：">
-            <a-input allowClear v-model:value="queryForm.serviceId" placeholder="请输入服务名" />
+            <a-select
+              style="width: 200px"
+              allowClear
+              v-model:value="queryForm.serviceId"
+              show-search
+              placeholder="请输入服务名"
+              :default-active-first-option="false"
+              :show-arrow="false"
+              :filter-option="false"
+              :not-found-content="'暂无此服务'"
+              :options="services"
+              @search="onSearchSevice"
+            >
+              <template #dropdownRender="{ menuNode: menu }">
+                <v-nodes :vnodes="menu" />
+                <a-divider style="margin: 4px 0" />
+                <div style="display: flex; flex-direction: row; justify-content: space-around">
+                  <a-button
+                    type="link"
+                    :icon="h(LeftOutlined)"
+                    @click="onClickServicePrev"
+                  ></a-button>
+                  <a-button
+                    type="link"
+                    :icon="h(RightOutlined)"
+                    @click="onClickServiceNext"
+                  ></a-button>
+                </div>
+              </template>
+            </a-select>
           </a-form-item>
           <a-form-item label="模板：">
-            <a-input allowClear v-model:value="queryForm.templateId" placeholder="请输入模板名" />
+            <a-select
+              style="width: 200px"
+              allowClear
+              v-model:value="queryForm.templateId"
+              show-search
+              placeholder="请输入模板名"
+              :default-active-first-option="false"
+              :show-arrow="false"
+              :filter-option="false"
+              :not-found-content="'暂无此模板'"
+              :options="templates"
+              @search="onSearchTemplate"
+            >
+              <template #dropdownRender="{ menuNode: menu }">
+                <v-nodes :vnodes="menu" />
+                <a-divider style="margin: 4px 0" />
+                <div style="display: flex; flex-direction: row; justify-content: space-around">
+                  <a-button
+                    title="上一页"
+                    type="link"
+                    :icon="h(LeftOutlined)"
+                    @click="onClickTemplatePrev"
+                  ></a-button>
+                  <a-button
+                    title="下一页"
+                    type="link"
+                    :icon="h(RightOutlined)"
+                    @click="onClickTemplateNext"
+                  ></a-button>
+                </div>
+              </template>
+            </a-select>
           </a-form-item>
           <a-form-item label="是否启用：">
             <a-select
@@ -83,8 +143,23 @@
 
 <script lang="ts" setup>
 import { message, Modal, type SelectProps } from 'ant-design-vue'
-import { h, onMounted, ref } from 'vue'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { defineComponent, h, onMounted, ref } from 'vue'
+import ServiceApi from '../api/service/service'
+import TemplateApi from '../api/template'
 import RouteApi from '../api/route'
+
+const VNodes = defineComponent({
+  props: {
+    vnodes: {
+      type: Object,
+      required: true
+    }
+  },
+  render() {
+    return this.vnodes
+  }
+})
 
 onMounted(async () => {
   loading.value = true
@@ -229,6 +304,101 @@ const queryForm = ref<QueryForm>({
     total: 0
   }
 })
+
+const services = ref([])
+
+const serviceQueryForm = ref({
+  name: '',
+  page: {
+    num: 1,
+    size: 10,
+    total: 0
+  }
+})
+
+async function fetchServices(input: string) {
+  if (input) {
+    serviceQueryForm.value.name = input
+    const resp = await ServiceApi.getPageableServiceList(serviceQueryForm.value)
+    services.value = resp.data.records.map((item: { name: any; id: any }) => {
+      return { label: item.name, value: item.id }
+    })
+    serviceQueryForm.value.page.total = resp.data.total
+  }
+}
+
+const onSearchSevice = async (input: string) => {
+  await fetchServices(input)
+}
+
+const onClickServicePrev = async () => {
+  if (serviceQueryForm.value.page.num === 1) {
+    message.error('已经是第一页了!')
+    return
+  }
+  serviceQueryForm.value.page.num = serviceQueryForm.value.page.num - 1
+  await fetchServices(serviceQueryForm.value.name)
+}
+
+const onClickServiceNext = async () => {
+  if (
+    serviceQueryForm.value.page.num * serviceQueryForm.value.page.size >=
+    serviceQueryForm.value.page.total
+  ) {
+    message.error('已经是最后一页了!')
+    return
+  }
+  serviceQueryForm.value.page.num = serviceQueryForm.value.page.num + 1
+  await fetchServices(serviceQueryForm.value.name)
+}
+
+const templates = ref([])
+
+const templateQueryForm = ref({
+  name: '',
+  type: 'TEMPLATED',
+  page: {
+    num: 1,
+    size: 10,
+    total: 0
+  }
+})
+
+async function fetchTemplates(input: string) {
+  if (input) {
+    templateQueryForm.value.name = input
+    const resp = await TemplateApi.getPageableTemplateList(templateQueryForm.value)
+    templates.value = resp.data.records.map((item: { name: any; id: any }) => {
+      return { label: item.name, value: item.id }
+    })
+    templateQueryForm.value.page.total = resp.data.total
+  }
+}
+
+const onSearchTemplate = async (input: string) => {
+  await fetchTemplates(input)
+}
+
+const onClickTemplatePrev = async () => {
+  if (templateQueryForm.value.page.num === 1) {
+    message.error('已经是第一页了!')
+    return
+  }
+  templateQueryForm.value.page.num = templateQueryForm.value.page.num - 1
+  await fetchServices(templateQueryForm.value.name)
+}
+
+const onClickTemplateNext = async () => {
+  if (
+    templateQueryForm.value.page.num * templateQueryForm.value.page.size >=
+    templateQueryForm.value.page.total
+  ) {
+    message.error('已经是最后一页了!')
+    return
+  }
+  templateQueryForm.value.page.num = templateQueryForm.value.page.num + 1
+  await fetchServices(templateQueryForm.value.name)
+}
 
 const data = ref<RouteRecord[]>([])
 

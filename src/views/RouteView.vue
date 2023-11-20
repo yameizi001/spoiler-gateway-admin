@@ -106,6 +106,11 @@
               {{ record.name }}
             </a>
           </template>
+          <template v-else-if="column.key === 'templateName'">
+            <template v-if="!record.templateName">
+              <a-tag style="border-radius: 50%" color="warning" :bordered="false"> N </a-tag>
+            </template>
+          </template>
           <template v-else-if="column.key === 'enabled'">
             <a-switch
               size="small"
@@ -240,8 +245,8 @@ const columns = [
   },
   {
     title: '模板',
-    key: 'tenplateName',
-    dataIndex: 'tenplateName',
+    key: 'templateName',
+    dataIndex: 'templateName',
     width: 180,
     ellipsis: {
       showTitle: true

@@ -148,7 +148,7 @@
 <script lang="ts" setup>
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import router from '@/router'
-import { ref, h, defineComponent, onMounted, watch } from 'vue'
+import { ref, h, defineComponent, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import TemplateWorkbench from './TemplateWorkbench.vue'
 import ServiceApi from '../api/service/service'
@@ -168,7 +168,8 @@ const VNodes = defineComponent({
 
 const props = defineProps({
   routeId: String,
-  templateId: String
+  templateId: String,
+  templateName: String
 })
 
 const current = ref<number>(0)
@@ -181,6 +182,7 @@ watch(
     if (configWay === 2 || configWay === 3) {
       if (props.templateId && props.templateId !== '-1') {
         createForm.value.templateId = props.templateId
+        templates.value = [{ label: props.templateName, value: props.templateId }]
       }
     }
   }
@@ -272,7 +274,14 @@ const onClickServiceNext = async () => {
   await fetchServices(serviceQueryForm.value.name)
 }
 
-const templates = ref([])
+const templates = ref<
+  [
+    {
+      label?: string | null
+      value?: string | null
+    }
+  ]
+>([{}])
 
 const templateQueryForm = ref({
   name: '',

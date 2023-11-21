@@ -411,8 +411,14 @@ const onClickCreate = async function () {
 }
 
 const onClickEdit = async function (record: any) {
-  // router.push('/route/workbench?routeId=' + record.id + '&templateId=' + record.templateId)
-  router.push('/route/workbench?routeId=' + record.id + '&templateId=295552451065413633')
+  router.push(
+    '/route/workbench?routeId=' +
+      record.id +
+      '&templateId=' +
+      record.templateId +
+      '&templateName=' +
+      record.templateName
+  )
 }
 
 const data = ref<RouteRecord[]>([])

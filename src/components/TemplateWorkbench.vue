@@ -181,7 +181,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, h, onMounted } from 'vue'
+import { ref, h, onMounted, watch } from 'vue'
 import router from '@/router'
 import { message } from 'ant-design-vue'
 import { PlusCircleOutlined, MinusCircleOutlined } from '@ant-design/icons-vue'
@@ -222,6 +222,13 @@ const props = defineProps({
     default: 'TEMPLATED'
   }
 })
+
+watch(
+  () => props.templateId,
+  async () => {
+    await get()
+  }
+)
 
 async function get() {
   if (props.templateId) {

@@ -86,7 +86,7 @@
       <div>
         <a-button danger @click="onClickClearQueryForm" type="link">清空</a-button>
         <a-button @click="onClickQuery" type="link">查询</a-button>
-        <a-button type="link">创建路由</a-button>
+        <a-button type="link" @click="onClickCreate">创建路由</a-button>
       </div>
     </div>
     <!-- table -->
@@ -102,7 +102,7 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
-            <a>
+            <a @click="onClickEdit(record)">
               {{ record.name }}
             </a>
           </template>
@@ -125,7 +125,7 @@
                 <a @click="onClickMetadata(record)">元数据</a>
               </a-space>
               <a-divider type="vertical" />
-              <a>编辑</a>
+              <a @click="onClickEdit(record)">编辑</a>
               <a-divider type="vertical" />
               <a @click="onClickDelete(record.id)">删除</a>
             </span>
@@ -153,6 +153,7 @@ import { defineComponent, h, onMounted, ref } from 'vue'
 import ServiceApi from '../api/service/service'
 import TemplateApi from '../api/template'
 import RouteApi from '../api/route'
+import router from '@/router'
 
 const VNodes = defineComponent({
   props: {
@@ -403,6 +404,15 @@ const onClickTemplateNext = async () => {
   }
   templateQueryForm.value.page.num = templateQueryForm.value.page.num + 1
   await fetchServices(templateQueryForm.value.name)
+}
+
+const onClickCreate = async function () {
+  router.push('/route/workbench')
+}
+
+const onClickEdit = async function (record: any) {
+  // router.push('/route/workbench?routeId=' + record.id + '&templateId=' + record.templateId)
+  router.push('/route/workbench?routeId=' + record.id + '&templateId=295552451065413633')
 }
 
 const data = ref<RouteRecord[]>([])

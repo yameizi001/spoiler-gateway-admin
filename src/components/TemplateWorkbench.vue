@@ -111,10 +111,12 @@
           </div>
         </a-form-item>
       </a-form>
-      <div class="operation-button-wrapper">
-        <a-button type="link" @click="onSubmitElementPropertiesForm">完成</a-button>
-        <a-button type="link" danger @click="onClearElementPropertiesForm">清空</a-button>
-      </div>
+      <template v-if="props.templateType === 'TEMPLATED'">
+        <div class="operation-button-wrapper">
+          <a-button type="link" @click="onSubmitElementPropertiesForm">完成</a-button>
+          <a-button type="link" danger @click="onClearElementPropertiesForm">清空</a-button>
+        </div>
+      </template>
       <div class="affix-wrapper">
         <a-affix :offset-top="0">
           <a-anchor :getContainer="getContainer" :items="anchorItem" />

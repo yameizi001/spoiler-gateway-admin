@@ -55,6 +55,15 @@ const router = createRouter({
       path: '/route',
       name: 'route',
       component: () => import('../views/RouteView.vue')
+    },
+    {
+      path: '/route/workbench',
+      name: 'route-workbench',
+      props: (route) => ({
+        routeId: route.query.routeId,
+        templateId: route.query.templateId
+      }),
+      component: () => import('../components/RouteWorkbench.vue')
     }
   ]
 })

@@ -225,8 +225,11 @@ const props = defineProps({
 
 watch(
   () => props.templateId,
-  async () => {
+  async (templateId) => {
     await get()
+    if (templateId && templateId !== '-1') {
+      templateUpsertForm.value.id = templateId
+    }
   }
 )
 
@@ -238,6 +241,9 @@ async function get() {
 }
 
 onMounted(async () => {
+  if (props.templateType) {
+    templateUpsertForm.value.type = props.templateType
+  }
   if (props.templateType !== 'TEMPLATED') {
     anchorItem.value.splice(0, 2)
   }
@@ -305,6 +311,10 @@ const templateUpsertForm = ref<{
   filters: [],
   metadata: [],
   type: 'TEMPLATED'
+})
+
+defineExpose({
+  templateUpsertForm
 })
 
 const configuredElement = ref<ElementRecord>()

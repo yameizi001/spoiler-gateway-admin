@@ -128,6 +128,7 @@
             <template v-if="configWay === 1 || configWay === 2">
               <template-workbench
                 style="overflow-y: auto"
+                ref="templateWorkbenchDom"
                 :template-id="createForm.templateId"
                 :template-type="'INSTANT'"
               />
@@ -137,7 +138,9 @@
             style="display: flex; flex-direction: row; justify-content: flex-end; margin-top: 12px"
           >
             <a-button @click="onClickCancel">取消</a-button>
-            <a-button style="margin-left: 24px" type="primary">完成</a-button>
+            <a-button style="margin-left: 24px" type="primary" @click="onClickSubmit"
+              >完成</a-button
+            >
           </div>
         </div>
       </template>
@@ -216,17 +219,6 @@ const onClickNext = async function () {
   }
 }
 
-const createForm = ref({
-  name: '',
-  description: '',
-  serviceId: '',
-  templateId: '',
-  predicates: [],
-  filters: [],
-  metadata: {},
-  ordered: 0
-})
-
 const services = ref([])
 
 const serviceQueryForm = ref({
@@ -279,9 +271,9 @@ const templates = ref<
     {
       label?: string | null
       value?: string | null
-    }
+    }?
   ]
->([{}])
+>([])
 
 const templateQueryForm = ref({
   name: '',
@@ -327,6 +319,27 @@ const onClickTemplateNext = async () => {
   }
   templateQueryForm.value.page.num = templateQueryForm.value.page.num + 1
   await fetchServices(templateQueryForm.value.name)
+}
+
+const createForm = ref({
+  name: '',
+  description: '',
+  serviceId: '',
+  templateId: '',
+  template: {},
+  predicates: [],
+  filters: [],
+  metadata: {},
+  ordered: 0
+})
+
+const templateWorkbenchDom = ref()
+
+const onClickSubmit = async function () {
+  if (templateWorkbenchDom.value) {
+    createForm.value.template = templateWorkbenchDom.value.templateUpsertForm
+  }
+  console.log(createForm.value)
 }
 </script>
 

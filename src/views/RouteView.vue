@@ -414,6 +414,10 @@ const onClickEdit = async function (record: any) {
   router.push(
     '/route/workbench?routeId=' +
       record.id +
+      '&serviceId=' +
+      record.serviceId +
+      '&serviceName=' +
+      record.serviceName +
       '&templateId=' +
       record.templateId +
       '&templateName=' +

@@ -1,6 +1,43 @@
 import http from '@/utils/request'
 
 export namespace Route {
+  export type CreateForm = {
+    name: string
+    description?: string | null
+    serviceId: string
+    templateId?: string | null
+    predicates: object[]
+    filters: object[]
+    metadata: object
+    ordered: number
+  }
+
+  export type UpdateForm = {
+    id: string
+    name: string
+    description?: string | null
+    serviceId: string
+    templateId?: string | null
+    predicates: object[]
+    filters: object[]
+    metadata: object
+    ordered: number
+  }
+
+  export type UpsertWithTemplateForm = {
+    name: string
+    description?: string | null
+    serviceId: string
+    templateId?: string | null
+    template: {
+      id?: string | null
+    }
+    predicates: object[]
+    filters: object[]
+    metadata: object
+    ordered: number
+  }
+
   export type QueryItem = {
     name: string
     args?: string | null
@@ -23,10 +60,26 @@ export namespace Route {
 }
 
 class RouteApi {
+  async create(form: Route.CreateForm) {
+    return http.post('/route', undefined, form)
+  }
+
   async remove(id: string) {
     return http.delete('/route', {
       id: id
     })
+  }
+
+  async edit(form: Route.UpdateForm) {
+    return http.put('/route', undefined, form)
+  }
+
+  async upsertWithTemplate(form: Route.UpsertWithTemplateForm) {
+    if (form.template.id && form.template.id !== '-1') {
+      return http.put('/route/template', undefined, form)
+    } else {
+      return http.post('/route/template', undefined, form)
+    }
   }
 
   async disable(id: string) {

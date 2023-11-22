@@ -33,8 +33,9 @@ export namespace Template {
   }
 
   export type QueryForm = {
+    id?: string | null
     name?: string | null
-    type: string
+    type?: string | null
     page: {
       num: number
       size: number
@@ -55,6 +56,10 @@ class TemplateApi {
 
   async edit(form: Template.UpdateForm) {
     return http.put('/template', undefined, form)
+  }
+
+  async apply(form: object) {
+    return http.post('/template/apply', undefined, form)
   }
 
   async getPageableTemplateList(form: Template.QueryForm) {

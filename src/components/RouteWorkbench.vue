@@ -80,13 +80,13 @@
             </a-form-item>
             <template v-if="configWay === 0">
               <a-form-item name="predicates" label="断言器代码块">
-                <a-textarea style="width: 600px" :rows="7" v-model:value="createForm.predicates" />
+                <a-textarea style="width: 600px" :rows="7" v-model:value="predicates" />
               </a-form-item>
               <a-form-item name="filters" label="过滤器代码块">
-                <a-textarea style="width: 600px" :rows="7" v-model:value="createForm.filters" />
+                <a-textarea style="width: 600px" :rows="7" v-model:value="filters" />
               </a-form-item>
               <a-form-item name="metadata" label="元数据代码块">
-                <a-textarea style="width: 500px" :rows="4" v-model:value="createForm.metadata" />
+                <a-textarea style="width: 500px" :rows="4" v-model:value="metadata" />
               </a-form-item>
             </template>
             <template v-if="configWay === 2 || configWay === 3">
@@ -151,11 +151,12 @@
 <script lang="ts" setup>
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import router from '@/router'
-import { ref, h, defineComponent, watch } from 'vue'
+import { ref, h, defineComponent, watch, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import TemplateWorkbench from './TemplateWorkbench.vue'
 import ServiceApi from '../api/service/service'
 import TemplateApi from '../api/template'
+import RouteApi from '../api/route'
 
 const VNodes = defineComponent({
   props: {
@@ -171,8 +172,49 @@ const VNodes = defineComponent({
 
 const props = defineProps({
   routeId: String,
+  serviceId: String,
+  serviceName: String,
   templateId: String,
   templateName: String
+})
+
+onMounted(async () => {
+  if (!props.routeId) {
+    return
+  }
+  services.value = [{ label: props.serviceName, value: props.serviceId }]
+  if (props.routeId) {
+    const resp = await RouteApi.getPageableServiceList({
+      id: props.routeId,
+      page: {
+        num: 1,
+        size: 1
+      }
+    })
+    createForm.value = resp.data.records[0]
+    predicates.value = JSON.stringify(createForm.value.predicates, null, 2)
+    filters.value = JSON.stringify(createForm.value.filters, null, 2)
+    metadata.value = JSON.stringify(createForm.value.metadata, null, 2)
+  }
+  if (!props.templateId || props.templateId === '-1') {
+    configWay.value = 0
+    current.value = 1
+  } else {
+    const resp = await TemplateApi.getPageableTemplateList({
+      id: props.templateId,
+      page: {
+        num: 1,
+        size: 1
+      }
+    })
+    const type = resp.data.records[0].type
+    if (type === 'TEMPLATED') {
+      configWay.value = 3
+    } else {
+      configWay.value = 1
+    }
+    current.value = 1
+  }
 })
 
 const current = ref<number>(0)
@@ -219,7 +261,14 @@ const onClickNext = async function () {
   }
 }
 
-const services = ref([])
+const services = ref<
+  [
+    {
+      label?: string | null
+      value?: string | null
+    }?
+  ]
+>([])
 
 const serviceQueryForm = ref({
   name: '',
@@ -321,7 +370,19 @@ const onClickTemplateNext = async () => {
   await fetchServices(templateQueryForm.value.name)
 }
 
-const createForm = ref({
+const createForm = ref<{
+  name: string
+  description?: string | null
+  serviceId: string
+  templateId?: string | null
+  template: {
+    id?: string | null
+  }
+  predicates: object[]
+  filters: object[]
+  metadata: object
+  ordered: number
+}>({
   name: '',
   description: '',
   serviceId: '',
@@ -333,13 +394,75 @@ const createForm = ref({
   ordered: 0
 })
 
+const predicates = ref('')
+
+const filters = ref('')
+
+const metadata = ref('')
+
 const templateWorkbenchDom = ref()
 
 const onClickSubmit = async function () {
   if (templateWorkbenchDom.value) {
     createForm.value.template = templateWorkbenchDom.value.templateUpsertForm
   }
-  console.log(createForm.value)
+  if (
+    configWay.value === 0 ||
+    (configWay.value === 1 && !props.routeId) ||
+    (configWay.value === 2 && !props.routeId)
+  ) {
+    createForm.value.templateId = null
+    if (createForm.value.template) {
+      createForm.value.template.id = null
+    }
+  }
+  if (predicates.value) {
+    createForm.value.predicates = JSON.parse(predicates.value)
+  }
+  if (filters.value) {
+    createForm.value.filters = JSON.parse(filters.value)
+  }
+  if (metadata.value) {
+    createForm.value.metadata = JSON.parse(metadata.value)
+  }
+  if (configWay.value === 0) {
+    if (props.routeId) {
+      const { ...remain } = createForm.value
+      await RouteApi.edit({
+        id: props.routeId!,
+        ...remain
+      })
+      message.success('修改成功')
+    } else {
+      await RouteApi.create(createForm.value)
+      message.success('创建成功')
+    }
+  } else if (configWay.value === 1 || configWay.value === 2) {
+    await RouteApi.upsertWithTemplate(createForm.value)
+    message.success('编辑成功')
+  } else {
+    if (!createForm.value.templateId) {
+      message.error('请选择模板')
+      return
+    }
+    const templateDetailResp = await TemplateApi.getTemplateDetail(createForm.value.templateId)
+    const applyResp = await TemplateApi.apply(templateDetailResp.data)
+    createForm.value.predicates = applyResp.data.predicates
+    createForm.value.filters = applyResp.data.filters
+    createForm.value.metadata = applyResp.data.metadata
+    if (props.routeId) {
+      const { ...remain } = createForm.value
+      await RouteApi.edit({
+        id: props.routeId!,
+        ...remain
+      })
+      message.success('修改成功')
+    } else {
+      await RouteApi.create(createForm.value)
+      message.success('创建成功')
+    }
+  }
+  router.back()
 }
 </script>
 

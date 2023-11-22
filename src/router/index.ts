@@ -61,6 +61,8 @@ const router = createRouter({
       name: 'route-workbench',
       props: (route) => ({
         routeId: route.query.routeId,
+        serviceId: route.query.serviceId,
+        serviceName: route.query.serviceName,
         templateId: route.query.templateId,
         templateName: route.query.templateName
       }),

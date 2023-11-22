@@ -129,7 +129,7 @@
               <template-workbench
                 style="overflow-y: auto"
                 ref="templateWorkbenchDom"
-                :template-id="createForm.templateId"
+                :template-id="createForm.templateId ? createForm.templateId : undefined"
                 :template-type="'INSTANT'"
               />
             </template>

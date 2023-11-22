@@ -6,6 +6,7 @@
       @click.stop="() => (visible = !visible)"
     >
       <a-image
+        style="min-width: 48px"
         width="48px"
         height="48px"
         class="icon-img"
@@ -13,8 +14,10 @@
         :src="'http://127.0.0.1:8080' + element.icon"
       />
       <div class="primary-info">
-        <div class="primary-info-item" style="font-weight: bold">{{ element.alias }}</div>
-        <div class="primary-info-item">
+        <div class="primary-info-item" style="font-weight: bold" :title="element.alias">
+          {{ element.alias }}
+        </div>
+        <div class="primary-info-item" :title="element.name">
           <a>{{ element.name }}</a>
         </div>
         <a-tag :color="element.ordered ? 'success' : 'warning'" :bordered="false">
@@ -74,6 +77,7 @@ const visible = ref(false)
 }
 
 .primary-info {
+  width: 118px;
   display: flex;
   flex-direction: column;
   margin-left: 12px;
@@ -83,6 +87,9 @@ const visible = ref(false)
   cursor: pointer;
   flex: 1;
   margin: 2px 0 2px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .primary-info-item:hover {

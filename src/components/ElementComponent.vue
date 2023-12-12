@@ -87,7 +87,7 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
-            <a @click="onClickElement(record)">
+            <a @click="onClickElement(record.id)">
               {{ record.name }}
             </a>
           </template>
@@ -110,12 +110,14 @@
       </a-table>
     </div>
     <!-- page -->
-    <a-pagination
-      v-model:current="queryForm.page.num"
-      :total="queryForm.page.total"
-      show-less-items
-      @change="onChangePage"
-    />
+    <div class="page-wrapper">
+      <a-pagination
+        v-model:current="queryForm.page.num"
+        :total="queryForm.page.total"
+        show-less-items
+        @change="onChangePage"
+      />
+    </div>
   </div>
 </template>
 
@@ -124,38 +126,12 @@ import { message, Modal, type UploadProps } from 'ant-design-vue'
 import { UploadOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import { h, onMounted, ref, watch } from 'vue'
 import router from '@/router'
+import to from 'await-to-js'
 import ElementApi from '../api/element/element'
 
 const props = defineProps({
   elementType: String
 })
-
-onMounted(async () => {
-  loading.value = true
-  await get()
-  loading.value = false
-})
-
-interface CreateForm {
-  name: string
-  alias: string
-  icon: string
-  description?: string | null
-  ordered?: number | null
-  type?: string | null
-}
-
-interface QueryForm {
-  name?: string | null
-  alias?: string | null
-  ordered?: boolean | null
-  type?: string | null
-  page: {
-    num: number
-    size: number
-    total: number
-  }
-}
 
 interface ElementRecord {
   id: string
@@ -212,7 +188,98 @@ const columns = [
   }
 ]
 
+const queryForm = ref<{
+  name?: string | null
+  alias?: string | null
+  ordered?: boolean | null
+  type?: string | null
+  page: {
+    num: number
+    size: number
+    total: number
+  }
+}>({
+  name: null,
+  alias: null,
+  ordered: null,
+  type: null,
+  page: {
+    num: 1,
+    size: 10,
+    total: 0
+  }
+})
+
 const loading = ref<boolean>(true)
+
+const data = ref<ElementRecord[]>([])
+
+async function get() {
+  loading.value = true
+  queryForm.value.type = props.elementType ? props.elementType : ''
+  const [error, resp] = await to(ElementApi.getPageableElementList(queryForm.value))
+  if (error) {
+    loading.value = false
+    return
+  }
+  data.value = resp.data.records
+  queryForm.value.page.total = resp.data.total
+  loading.value = false
+}
+
+onMounted(async () => {
+  await get()
+})
+
+const onClickQuery = async function () {
+  await get()
+}
+
+const onClickClearQueryForm = async function () {
+  queryForm.value = {
+    name: null,
+    alias: null,
+    ordered: null,
+    type: null,
+    page: {
+      num: queryForm.value.page.num,
+      size: queryForm.value.page.size,
+      total: queryForm.value.page.total
+    }
+  }
+}
+
+const onClickElement = async function (id: string) {
+  router.push('/plugin/element/property/' + id)
+}
+
+const onClickMetadata = async function (record: ElementRecord) {
+  Modal.info({
+    width: '500px',
+    title: '元数据',
+    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
+    footer: null,
+    closable: true,
+    maskClosable: true
+  })
+}
+
+const onClickDelete = async function (id: string) {
+  const [error] = await to(ElementApi.remove(id))
+  if (!error) {
+    message.success('删除成功')
+  }
+  await get()
+  if (data.value.length == 0) {
+    const pageNum = queryForm.value.page.num
+    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
+    await get()
+  }
+}
+
+const onChangePage = async function () {
+  await get()
+}
 
 const fileList = ref<UploadProps['fileList']>([])
 
@@ -245,40 +312,6 @@ watch(
     }
   }
 )
-
-const createFormVisible = ref<boolean>(false)
-
-const createFormLoading = ref<boolean>(false)
-
-const createForm = ref<CreateForm>({
-  name: '',
-  alias: '',
-  icon: '',
-  description: '',
-  ordered: null,
-  type: null
-})
-
-const queryForm = ref<QueryForm>({
-  name: null,
-  alias: null,
-  ordered: null,
-  type: null,
-  page: {
-    num: 1,
-    size: 10,
-    total: 0
-  }
-})
-
-const data = ref<ElementRecord[]>([])
-
-async function get() {
-  queryForm.value.type = props.elementType ? props.elementType : ''
-  const resp = await ElementApi.getPageableElementList(queryForm.value)
-  data.value = resp.data.records
-  queryForm.value.page.total = resp.data.total
-}
 
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   const isImg =
@@ -318,6 +351,26 @@ const onClickRemoveUpload = async function () {
   fileList.value = []
 }
 
+const createFormVisible = ref<boolean>(false)
+
+const createFormLoading = ref<boolean>(false)
+
+const createForm = ref<{
+  name: string
+  alias: string
+  icon: string
+  description?: string | null
+  ordered?: number | null
+  type?: string | null
+}>({
+  name: '',
+  alias: '',
+  icon: '',
+  description: '',
+  ordered: null,
+  type: null
+})
+
 const onSubmitCreateForm = async function () {
   createFormLoading.value = true
   let resp
@@ -348,54 +401,6 @@ const onSubmitCreateForm = async function () {
   filePath.value = ''
   await get()
 }
-
-const onClickDelete = async function (id: string) {
-  await ElementApi.remove(id)
-  message.success('删除成功')
-  await get()
-  if (data.value.length == 0) {
-    const pageNum = queryForm.value.page.num
-    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
-    await get()
-  }
-}
-
-const onClickClearQueryForm = async function () {
-  queryForm.value = {
-    name: null,
-    alias: null,
-    ordered: null,
-    type: null,
-    page: {
-      num: queryForm.value.page.num,
-      size: queryForm.value.page.size,
-      total: queryForm.value.page.total
-    }
-  }
-}
-
-const onClickQuery = async function () {
-  await get()
-}
-
-const onClickElement = async function (record: ElementRecord) {
-  router.push('/plugin/element/property/' + record.id)
-}
-
-const onClickMetadata = async function (record: ElementRecord) {
-  Modal.info({
-    width: '500px',
-    title: '元数据',
-    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
-    footer: null,
-    closable: true,
-    maskClosable: true
-  })
-}
-
-const onChangePage = async function () {
-  await get()
-}
 </script>
 
 <style scoped>
@@ -419,5 +424,10 @@ const onChangePage = async function () {
   flex: 1;
   padding: 12px 0;
   text-align: center;
+}
+
+.page-wrapper {
+  display: flex;
+  justify-content: end;
 }
 </style>

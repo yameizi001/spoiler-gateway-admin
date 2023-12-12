@@ -217,6 +217,8 @@ const data = ref<ElementRecord[]>([])
 async function get() {
   loading.value = true
   queryForm.value.type = props.elementType ? props.elementType : ''
+  const pageNum = queryForm.value.page.num
+  queryForm.value.page.num = pageNum > 0 ? pageNum : 1
   const [error, resp] = await to(ElementApi.getPageableElementList(queryForm.value))
   if (error) {
     loading.value = false
@@ -366,7 +368,7 @@ const createForm = ref<{
   name: '',
   alias: '',
   icon: '',
-  description: '',
+  description: null,
   ordered: null,
   type: null
 })
@@ -394,7 +396,7 @@ const onSubmitCreateForm = async function () {
     name: '',
     alias: '',
     icon: '',
-    description: '',
+    description: null,
     ordered: null,
     type: null
   }

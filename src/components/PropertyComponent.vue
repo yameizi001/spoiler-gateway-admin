@@ -79,6 +79,16 @@
         :data-source="data"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'key'">
+            <template v-if="record.key">
+              {{ record.key }}
+            </template>
+            <template v-else>
+              <a-tag :color="'warning'" :bordered="false">
+                {{ 'None' }}
+              </a-tag>
+            </template>
+          </template>
           <template v-if="column.key === 'required'">
             <a-tag
               style="border-radius: 50%"
@@ -87,6 +97,16 @@
             >
               {{ record.required ? 'Y' : 'N' }}
             </a-tag>
+          </template>
+          <template v-if="column.key === 'regex'">
+            <template v-if="record.regex">
+              {{ record.regex }}
+            </template>
+            <template v-else>
+              <a-tag :color="'warning'" :bordered="false">
+                {{ 'None' }}
+              </a-tag>
+            </template>
           </template>
           <template v-else-if="column.key === 'operation'">
             <span>
@@ -104,12 +124,14 @@
       </a-table>
     </div>
     <!-- page -->
-    <a-pagination
-      v-model:current="queryForm.page.num"
-      :total="queryForm.page.total"
-      show-less-items
-      @change="onChangePage"
-    />
+    <div class="page-wrapper">
+      <a-pagination
+        v-model:current="queryForm.page.num"
+        :total="queryForm.page.total"
+        show-less-items
+        @change="onChangePage"
+      />
+    </div>
   </div>
 </template>
 
@@ -118,38 +140,12 @@ import { message, Modal, type SelectProps } from 'ant-design-vue'
 import { LeftOutlined } from '@ant-design/icons-vue'
 import { h, onMounted, ref } from 'vue'
 import router from '@/router'
+import to from 'await-to-js'
 import PropertyApi from '../api/element/property'
 
 const props = defineProps({
   elementId: String
 })
-
-onMounted(async () => {
-  loading.value = true
-  await get()
-  loading.value = false
-})
-
-interface CreateForm {
-  elementId?: string | null
-  key?: string | null
-  alias: string
-  description?: string | null
-  required: boolean
-  regex?: string | null
-}
-
-interface QueryForm {
-  elementId?: string | null
-  key?: string | null
-  alias?: string | null
-  required?: boolean | null
-  page: {
-    num: number
-    size: number
-    total: number
-  }
-}
 
 interface PropertyRecord {
   id: string
@@ -209,20 +205,6 @@ const columns = [
   }
 ]
 
-const loading = ref<boolean>(true)
-
-const createFormVisible = ref<boolean>(false)
-
-const createFormLoading = ref<boolean>(false)
-
-const createForm = ref<CreateForm>({
-  key: '',
-  alias: '',
-  description: '',
-  required: false,
-  regex: ''
-})
-
 const simpleBooleanOptions = ref<SelectProps['options']>([
   {
     value: 'true',
@@ -234,7 +216,17 @@ const simpleBooleanOptions = ref<SelectProps['options']>([
   }
 ])
 
-const queryForm = ref<QueryForm>({
+const queryForm = ref<{
+  elementId?: string | null
+  key?: string | null
+  alias?: string | null
+  required?: boolean | null
+  page: {
+    num: number
+    size: number
+    total: number
+  }
+}>({
   elementId: null,
   key: null,
   alias: null,
@@ -246,14 +238,93 @@ const queryForm = ref<QueryForm>({
   }
 })
 
+const loading = ref<boolean>(true)
+
 const data = ref<PropertyRecord[]>([])
 
 async function get() {
+  loading.value = true
   queryForm.value.elementId = props.elementId ? props.elementId : '-1'
-  const resp = await PropertyApi.getPageablePropertyList(queryForm.value)
+  const pageNum = queryForm.value.page.num
+  queryForm.value.page.num = pageNum > 0 ? pageNum : 1
+  const [error, resp] = await to(PropertyApi.getPageablePropertyList(queryForm.value))
+  if (error) {
+    loading.value = false
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
+  loading.value = false
 }
+
+onMounted(async () => {
+  await get()
+})
+
+const onClickQuery = async function () {
+  await get()
+}
+
+const onClickClearQueryForm = async function () {
+  queryForm.value = {
+    elementId: null,
+    key: null,
+    alias: null,
+    required: null,
+    page: {
+      num: queryForm.value.page.num,
+      size: queryForm.value.page.size,
+      total: queryForm.value.page.total
+    }
+  }
+}
+
+const onClickMetadata = async function (record: PropertyRecord) {
+  Modal.info({
+    width: '500px',
+    title: '元数据',
+    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
+    footer: null,
+    closable: true,
+    maskClosable: true
+  })
+}
+
+const onClickDelete = async function (id: string) {
+  const [error] = await to(PropertyApi.remove(id))
+  if (!error) {
+    message.success('删除成功')
+  }
+  await get()
+  if (data.value.length == 0) {
+    const pageNum = queryForm.value.page.num
+    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
+    await get()
+  }
+}
+
+const onChangePage = async function () {
+  await get()
+}
+
+const createFormVisible = ref<boolean>(false)
+
+const createFormLoading = ref<boolean>(false)
+
+const createForm = ref<{
+  elementId?: string | null
+  key?: string | null
+  alias: string
+  description?: string | null
+  required: boolean
+  regex?: string | null
+}>({
+  key: null,
+  alias: '',
+  description: null,
+  required: false,
+  regex: null
+})
 
 const onSubmitCreateForm = async function () {
   createFormLoading.value = true
@@ -274,56 +345,12 @@ const onSubmitCreateForm = async function () {
   createFormVisible.value = false
   createFormLoading.value = false
   createForm.value = {
-    key: '',
-    alias: '',
-    description: '',
-    required: false,
-    regex: ''
-  }
-  await get()
-}
-
-const onClickDelete = async function (id: string) {
-  await PropertyApi.remove(id)
-  message.success('删除成功')
-  await get()
-  if (data.value.length == 0) {
-    const pageNum = queryForm.value.page.num
-    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
-    await get()
-  }
-}
-
-const onClickClearQueryForm = async function () {
-  queryForm.value = {
-    elementId: null,
     key: null,
-    alias: null,
-    required: null,
-    page: {
-      num: queryForm.value.page.num,
-      size: queryForm.value.page.size,
-      total: queryForm.value.page.total
-    }
+    alias: '',
+    description: null,
+    required: false,
+    regex: null
   }
-}
-
-const onClickQuery = async function () {
-  await get()
-}
-
-const onClickMetadata = async function (record: PropertyRecord) {
-  Modal.info({
-    width: '500px',
-    title: '元数据',
-    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
-    footer: null,
-    closable: true,
-    maskClosable: true
-  })
-}
-
-const onChangePage = async function () {
   await get()
 }
 </script>
@@ -349,5 +376,10 @@ const onChangePage = async function () {
   flex: 1;
   padding: 12px 0;
   text-align: center;
+}
+
+.page-wrapper {
+  display: flex;
+  justify-content: end;
 }
 </style>

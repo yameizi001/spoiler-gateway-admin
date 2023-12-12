@@ -89,7 +89,7 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
-            <a @click="onClickService(record)">
+            <a @click="onClickService(record.id)">
               {{ record.name }}
             </a>
           </template>
@@ -119,12 +119,14 @@
       </a-table>
     </div>
     <!-- page -->
-    <a-pagination
-      v-model:current="queryForm.page.num"
-      :total="queryForm.page.total"
-      show-less-items
-      @change="onChangePage"
-    />
+    <div class="page-wrapper">
+      <a-pagination
+        v-model:current="queryForm.page.num"
+        :total="queryForm.page.total"
+        show-less-items
+        @change="onChangePage"
+      />
+    </div>
   </div>
 </template>
 
@@ -132,36 +134,8 @@
 import { message, Modal, type SelectProps } from 'ant-design-vue'
 import { h, onMounted, ref } from 'vue'
 import router from '@/router'
+import to from 'await-to-js'
 import ServiceApi from '../api/service/service'
-
-onMounted(async () => {
-  loading.value = true
-  await get()
-  loading.value = false
-})
-
-interface CreateForm {
-  name: string
-  description?: string | null
-  metadata?: string | null
-}
-
-interface UpdateForm {
-  id: string
-  name: string
-  description?: string | null
-  metadata?: string | null
-}
-
-interface QueryForm {
-  name?: string | null
-  enabled?: boolean | null
-  page: {
-    num: number
-    size: number
-    total: number
-  }
-}
 
 interface ServiceRecord {
   id: string
@@ -219,29 +193,6 @@ const columns = [
   }
 ]
 
-const loading = ref<boolean>(true)
-
-const createFormVisible = ref<boolean>(false)
-
-const createFormLoading = ref<boolean>(false)
-
-const createForm = ref<CreateForm>({
-  name: '',
-  description: null,
-  metadata: null
-})
-
-const updateFormVisible = ref<boolean>(false)
-
-const updateFormLoading = ref<boolean>(false)
-
-const updateForm = ref<UpdateForm>({
-  id: '',
-  name: '',
-  description: null,
-  metadata: null
-})
-
 const enabledOptions = ref<SelectProps['options']>([
   {
     value: 'true',
@@ -253,7 +204,15 @@ const enabledOptions = ref<SelectProps['options']>([
   }
 ])
 
-const queryForm = ref<QueryForm>({
+const queryForm = ref<{
+  name?: string | null
+  enabled?: boolean | null
+  page: {
+    num: number
+    size: number
+    total: number
+  }
+}>({
   name: null,
   enabled: null,
   page: {
@@ -263,13 +222,115 @@ const queryForm = ref<QueryForm>({
   }
 })
 
-const data = ref<ServiceRecord[]>([])
+const loading = ref<boolean>(true)
+
+const data = ref<[]>([])
 
 async function get() {
-  const resp = await ServiceApi.getPageableServiceList(queryForm.value)
+  loading.value = true
+  const [error, resp] = await to(ServiceApi.getPageableServiceList(queryForm.value))
+  if (error) {
+    loading.value = false
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
+  loading.value = false
 }
+
+onMounted(async () => {
+  await get()
+})
+
+const onClickQuery = async function () {
+  await get()
+}
+
+const onClickClearQueryForm = async function () {
+  queryForm.value = {
+    name: null,
+    enabled: null,
+    page: {
+      num: queryForm.value.page.num,
+      size: queryForm.value.page.size,
+      total: queryForm.value.page.total
+    }
+  }
+}
+
+const onClickService = async function (id: string) {
+  router.push('/instance/systemctl/' + id)
+}
+
+const onClickSwitch = async function (record: ServiceRecord) {
+  record.switching = true
+  const enabled = record.enabled
+  if (enabled) {
+    const [error] = await to(ServiceApi.disable(record.id))
+    if (!error) {
+      message.success('禁用成功')
+    }
+  } else {
+    const [error] = await to(ServiceApi.enable(record.id))
+    if (!error) {
+      message.success('启用成功')
+    }
+  }
+  record.switching = false
+  await get()
+}
+
+const onClickMetadata = async function (record: ServiceRecord) {
+  Modal.info({
+    width: '500px',
+    title: '元数据',
+    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
+    footer: null,
+    closable: true,
+    maskClosable: true
+  })
+}
+
+const onClickDelete = async function (id: string) {
+  const [error] = await to(ServiceApi.remove(id))
+  if (!error) {
+    message.success('删除成功')
+  }
+  await get()
+  if (data.value.length == 0) {
+    const pageNum = queryForm.value.page.num
+    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
+    await get()
+  }
+}
+
+const onClickEdit = async function (record: ServiceRecord) {
+  updateFormVisible.value = true
+  const { metadata, ...remain } = record
+  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
+  updateForm.value = {
+    metadata: metadataString,
+    ...remain
+  }
+}
+
+const onChangePage = async function () {
+  await get()
+}
+
+const createFormVisible = ref<boolean>(false)
+
+const createFormLoading = ref<boolean>(false)
+
+const createForm = ref<{
+  name: string
+  description?: string | null
+  metadata?: string | null
+}>({
+  name: '',
+  description: null,
+  metadata: null
+})
 
 const onSubmitCreateForm = async function () {
   createFormLoading.value = true
@@ -298,6 +359,22 @@ const onSubmitCreateForm = async function () {
   await get()
 }
 
+const updateFormVisible = ref<boolean>(false)
+
+const updateFormLoading = ref<boolean>(false)
+
+const updateForm = ref<{
+  id: string
+  name: string
+  description?: string | null
+  metadata?: string | null
+}>({
+  id: '',
+  name: '',
+  description: null,
+  metadata: null
+})
+
 const onSubmitUpdateForm = async function () {
   updateFormLoading.value = true
   const { metadata, ...remain } = updateForm.value
@@ -325,76 +402,6 @@ const onSubmitUpdateForm = async function () {
   }
   await get()
 }
-
-const onClickDelete = async function (id: string) {
-  await ServiceApi.remove(id)
-  message.success('删除成功')
-  await get()
-  if (data.value.length == 0) {
-    const pageNum = queryForm.value.page.num
-    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
-    await get()
-  }
-}
-
-const onClickEdit = async function (record: ServiceRecord) {
-  updateFormVisible.value = true
-  const { metadata, ...remain } = record
-  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
-  updateForm.value = {
-    metadata: metadataString,
-    ...remain
-  }
-}
-
-const onClickSwitch = async function (record: ServiceRecord) {
-  record.switching = true
-  const enabled = record.enabled
-  if (enabled) {
-    await ServiceApi.disable(record.id)
-    message.success('禁用成功')
-  } else {
-    await ServiceApi.enable(record.id)
-    message.success('启用成功')
-  }
-  record.switching = false
-  await get()
-}
-
-const onClickClearQueryForm = async function () {
-  queryForm.value = {
-    name: null,
-    enabled: null,
-    page: {
-      num: queryForm.value.page.num,
-      size: queryForm.value.page.size,
-      total: queryForm.value.page.total
-    }
-  }
-}
-
-const onClickQuery = async function () {
-  await get()
-}
-
-const onClickService = async function (record: ServiceRecord) {
-  router.push('/instance/systemctl/' + record.id)
-}
-
-const onClickMetadata = async function (record: ServiceRecord) {
-  Modal.info({
-    width: '500px',
-    title: '元数据',
-    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
-    footer: null,
-    closable: true,
-    maskClosable: true
-  })
-}
-
-const onChangePage = async function () {
-  await get()
-}
 </script>
 
 <style scoped>
@@ -418,5 +425,10 @@ const onChangePage = async function () {
   flex: 1;
   padding: 12px 0;
   text-align: center;
+}
+
+.page-wrapper {
+  display: flex;
+  justify-content: end;
 }
 </style>

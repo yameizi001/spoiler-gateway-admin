@@ -1,3 +1,4 @@
+import { message } from 'ant-design-vue'
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 
 const BASE_URL = 'http://127.0.0.1:8080/gateway-backend'
@@ -26,10 +27,20 @@ class HttpRequest {
         const res = response.data
         if (res.code !== 200) {
           // business error
+          if (res.data) {
+            message.error(res.data)
+          } else {
+            message.error('未知错误, 请联系管理人员')
+          }
         }
         return res
       },
       (error) => {
+        if (error.message.includes('timeout')) {
+          message.error('请求超时, 请尝试刷新或稍后重试')
+        } else {
+          message.error('未知错误, 请联系管理人员')
+        }
         return Promise.reject(error)
       }
     )

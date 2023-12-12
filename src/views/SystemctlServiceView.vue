@@ -228,6 +228,8 @@ const data = ref<[]>([])
 
 async function get() {
   loading.value = true
+  const pageNum = queryForm.value.page.num
+  queryForm.value.page.num = pageNum > 0 ? pageNum : 1
   const [error, resp] = await to(ServiceApi.getPageableServiceList(queryForm.value))
   if (error) {
     loading.value = false
@@ -291,6 +293,16 @@ const onClickMetadata = async function (record: ServiceRecord) {
   })
 }
 
+const onClickEdit = async function (record: ServiceRecord) {
+  updateFormVisible.value = true
+  const { metadata, ...remain } = record
+  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
+  updateForm.value = {
+    metadata: metadataString,
+    ...remain
+  }
+}
+
 const onClickDelete = async function (id: string) {
   const [error] = await to(ServiceApi.remove(id))
   if (!error) {
@@ -301,16 +313,6 @@ const onClickDelete = async function (id: string) {
     const pageNum = queryForm.value.page.num
     queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
     await get()
-  }
-}
-
-const onClickEdit = async function (record: ServiceRecord) {
-  updateFormVisible.value = true
-  const { metadata, ...remain } = record
-  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
-  updateForm.value = {
-    metadata: metadataString,
-    ...remain
   }
 }
 

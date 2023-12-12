@@ -157,13 +157,18 @@
         :data-source="data"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'scheme'">
+            <a-tag :color="record.scheme ? 'success' : 'warning'" :bordered="false">
+              {{ record.scheme ? record.scheme : 'None' }}
+            </a-tag>
+          </template>
           <template v-if="column.key === 'secure'">
             <a-tag
               style="border-radius: 50%"
               :color="record.secure ? 'success' : 'warning'"
               :bordered="false"
             >
-              {{ secureState(record.secure) }}
+              {{ record.secure ? 'Y' : 'N' }}
             </a-tag>
           </template>
           <template v-if="column.key === 'health'">
@@ -177,7 +182,13 @@
               "
               :bordered="false"
             >
-              {{ healthState(record.health) }}
+              {{
+                record.health === undefined || record.health === null
+                  ? '未知'
+                  : record.health
+                  ? '健康'
+                  : '不健康'
+              }}
             </a-tag>
           </template>
           <template v-if="column.key === 'enabled'">
@@ -206,12 +217,14 @@
       </a-table>
     </div>
     <!-- page -->
-    <a-pagination
-      v-model:current="queryForm.page.num"
-      :total="queryForm.page.total"
-      show-less-items
-      @change="onChangePage"
-    />
+    <div class="page-wrapper">
+      <a-pagination
+        v-model:current="queryForm.page.num"
+        :total="queryForm.page.total"
+        show-less-items
+        @change="onChangePage"
+      />
+    </div>
   </div>
 </template>
 
@@ -220,54 +233,12 @@ import { Modal, message, type SelectProps } from 'ant-design-vue'
 import { LeftOutlined } from '@ant-design/icons-vue'
 import { h, onMounted, ref } from 'vue'
 import router from '@/router'
+import to from 'await-to-js'
 import InstanceApi from '../api/service/instance'
 
 const props = defineProps({
   serviceId: String
 })
-
-onMounted(async () => {
-  loading.value = true
-  await get()
-  loading.value = false
-})
-
-interface CreateForm {
-  serviceId: string
-  name: string
-  scheme?: string | null
-  secure: boolean
-  host: string
-  port: number
-  weight: number
-  metadata?: string | null
-}
-
-interface UpdateForm {
-  id: string
-  name: string
-  scheme?: string | null
-  secure: boolean
-  host: string
-  port: number
-  weight: number
-  metadata?: string | null
-}
-
-interface QueryForm {
-  name?: string | null
-  scheme?: string | null
-  secure?: boolean | null
-  host?: string | null
-  port?: number | null
-  health?: boolean | null
-  enabled?: boolean | null
-  page: {
-    num: number
-    size: number
-    total: number
-  }
-}
 
 interface InstanceRecord {
   id: string
@@ -362,38 +333,6 @@ const columns = [
   }
 ]
 
-const createFormVisible = ref<boolean>(false)
-
-const createFormLoading = ref<boolean>(false)
-
-const createForm = ref<CreateForm>({
-  serviceId: '',
-  name: '',
-  scheme: '',
-  secure: false,
-  host: '',
-  port: 8080,
-  weight: 1,
-  metadata: null
-})
-
-const updateFormVisible = ref<boolean>(false)
-
-const updateFormLoading = ref<boolean>(false)
-
-const updateForm = ref<UpdateForm>({
-  id: '',
-  name: '',
-  scheme: '',
-  secure: false,
-  host: '',
-  port: 8080,
-  weight: 1,
-  metadata: null
-})
-
-const loading = ref<boolean>(false)
-
 const simpleBooleanOptions = ref<SelectProps['options']>([
   {
     value: 'true',
@@ -416,7 +355,20 @@ const healthOptions = ref<SelectProps['options']>([
   }
 ])
 
-const queryForm = ref<QueryForm>({
+const queryForm = ref<{
+  name?: string | null
+  scheme?: string | null
+  secure?: boolean | null
+  host?: string | null
+  port?: number | null
+  health?: boolean | null
+  enabled?: boolean | null
+  page: {
+    num: number
+    size: number
+    total: number
+  }
+}>({
   name: null,
   scheme: null,
   secure: null,
@@ -431,17 +383,125 @@ const queryForm = ref<QueryForm>({
   }
 })
 
+const loading = ref<boolean>(false)
+
 const data = ref<InstanceRecord[]>([])
 
 async function get() {
   loading.value = true
   const pageNum = queryForm.value.page.num
   queryForm.value.page.num = pageNum > 0 ? pageNum : 1
-  const resp = await InstanceApi.getPageableInstanceList(queryForm.value)
+  const [error, resp] = await to(InstanceApi.getPageableInstanceList(queryForm.value))
+  if (error) {
+    loading.value = false
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
   loading.value = false
 }
+
+onMounted(async () => {
+  await get()
+})
+
+const onClickQuery = async function () {
+  await get()
+}
+
+const onClickClearQueryForm = async function () {
+  queryForm.value = {
+    name: null,
+    scheme: null,
+    secure: null,
+    host: null,
+    port: null,
+    health: null,
+    enabled: null,
+    page: {
+      num: queryForm.value.page.num,
+      size: queryForm.value.page.size,
+      total: queryForm.value.page.total
+    }
+  }
+}
+
+const onClickSwitch = async function (record: InstanceRecord) {
+  record.switching = true
+  const enabled = record.enabled
+  if (enabled) {
+    const [error] = await to(InstanceApi.disable(record.id))
+    if (!error) {
+      message.success('禁用成功')
+    }
+  } else {
+    const [error] = await to(InstanceApi.enable(record.id))
+    if (!error) {
+      message.success('启用成功')
+    }
+  }
+  record.switching = false
+  await get()
+}
+
+const onClickMetadata = async function (record: InstanceRecord) {
+  Modal.info({
+    width: '500px',
+    title: '元数据',
+    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
+    footer: null,
+    closable: true,
+    maskClosable: true
+  })
+}
+
+const onClickEdit = async function (record: InstanceRecord) {
+  updateFormVisible.value = true
+  const { metadata, ...remain } = record
+  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
+  updateForm.value = { metadata: metadataString, ...remain }
+}
+
+const onClickDelete = async function (id: string) {
+  const [error] = await to(InstanceApi.remove(id))
+  if (!error) {
+    message.success('删除成功')
+  }
+  await get()
+  if (data.value.length == 0) {
+    const pageNum = queryForm.value.page.num
+    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
+    await get()
+  }
+}
+
+const onChangePage = async function () {
+  await get()
+}
+
+const createFormVisible = ref<boolean>(false)
+
+const createFormLoading = ref<boolean>(false)
+
+const createForm = ref<{
+  serviceId: string
+  name: string
+  scheme?: string | null
+  secure: boolean
+  host: string
+  port: number
+  weight: number
+  metadata?: string | null
+}>({
+  serviceId: '',
+  name: '',
+  scheme: null,
+  secure: false,
+  host: '',
+  port: 8080,
+  weight: 1,
+  metadata: null
+})
 
 const onSubmitCreateForm = async function () {
   createFormLoading.value = true
@@ -466,7 +526,7 @@ const onSubmitCreateForm = async function () {
   createForm.value = {
     serviceId: '',
     name: '',
-    scheme: '',
+    scheme: null,
     secure: false,
     host: '',
     port: 8080,
@@ -476,23 +536,29 @@ const onSubmitCreateForm = async function () {
   await get()
 }
 
-const onClickDelete = async function (id: string) {
-  await InstanceApi.remove(id)
-  message.success('删除成功')
-  await get()
-  if (data.value.length == 0) {
-    const pageNum = queryForm.value.page.num
-    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
-    await get()
-  }
-}
+const updateFormVisible = ref<boolean>(false)
 
-const onClickEdit = async function (record: InstanceRecord) {
-  updateFormVisible.value = true
-  const { metadata, ...remain } = record
-  const metadataString = metadata ? JSON.stringify(metadata, null, 2) : null
-  updateForm.value = { metadata: metadataString, ...remain }
-}
+const updateFormLoading = ref<boolean>(false)
+
+const updateForm = ref<{
+  id: string
+  name: string
+  scheme?: string | null
+  secure: boolean
+  host: string
+  port: number
+  weight: number
+  metadata?: string | null
+}>({
+  id: '',
+  name: '',
+  scheme: null,
+  secure: false,
+  host: '',
+  port: 8080,
+  weight: 1,
+  metadata: null
+})
 
 const onSubmitUpdateForm = async function () {
   updateFormLoading.value = true
@@ -516,71 +582,13 @@ const onSubmitUpdateForm = async function () {
   updateForm.value = {
     id: '',
     name: '',
-    scheme: '',
+    scheme: null,
     secure: false,
     host: '',
     port: 8080,
     weight: 1,
     metadata: null
   }
-  await get()
-}
-
-const onClickSwitch = async function (record: InstanceRecord) {
-  record.switching = true
-  const enabled = record.enabled
-  if (enabled) {
-    await InstanceApi.disable(record.id)
-    message.success('禁用成功')
-  } else {
-    await InstanceApi.enable(record.id)
-    message.success('启用成功')
-  }
-  record.switching = false
-  await get()
-}
-
-const onClickClearQueryForm = async function () {
-  queryForm.value = {
-    name: null,
-    scheme: null,
-    secure: null,
-    host: null,
-    port: null,
-    health: null,
-    enabled: null,
-    page: {
-      num: queryForm.value.page.num,
-      size: queryForm.value.page.size,
-      total: queryForm.value.page.total
-    }
-  }
-}
-
-const onClickQuery = async function () {
-  await get()
-}
-
-const secureState = (secure: boolean) => {
-  return secure ? 'Y' : 'N'
-}
-
-const healthState = (health?: boolean | null) => {
-  return health === undefined || health === null ? '未知' : health ? '健康' : '不健康'
-}
-
-const onClickMetadata = async function (record: InstanceRecord) {
-  Modal.info({
-    width: '500px',
-    title: '元数据',
-    content: h('div', {}, [h('pre', JSON.stringify(record, null, 2))]),
-    footer: null,
-    closable: true,
-    maskClosable: true
-  })
-}
-
-const onChangePage = async function () {
   await get()
 }
 </script>
@@ -607,5 +615,10 @@ const onChangePage = async function () {
   flex: 1;
   padding: 12px 0;
   text-align: center;
+}
+
+.page-wrapper {
+  display: flex;
+  justify-content: end;
 }
 </style>

@@ -50,12 +50,14 @@
       </a-table>
     </div>
     <!-- page -->
-    <a-pagination
-      v-model:current="queryForm.page.num"
-      :total="queryForm.page.total"
-      show-less-items
-      @change="onChangePage"
-    />
+    <div class="page-wrapper">
+      <a-pagination
+        v-model:current="queryForm.page.num"
+        :total="queryForm.page.total"
+        show-less-items
+        @change="onChangePage"
+      />
+    </div>
   </div>
 </template>
 
@@ -63,22 +65,8 @@
 import { message, Modal } from 'ant-design-vue'
 import { h, onMounted, ref } from 'vue'
 import router from '@/router'
+import to from 'await-to-js'
 import TemplateApi from '../api/template'
-
-onMounted(async () => {
-  loading.value = true
-  await get()
-  loading.value = false
-})
-
-interface QueryForm {
-  name?: string | null
-  page: {
-    num: number
-    size: number
-    total: number
-  }
-}
 
 interface TemplateRecord {
   id: string
@@ -87,6 +75,8 @@ interface TemplateRecord {
   createTime: string
   updateTime: string
 }
+
+const type = 'TEMPLATED'
 
 const columns = [
   {
@@ -126,11 +116,14 @@ const columns = [
   }
 ]
 
-const type = 'TEMPLATED'
-
-const loading = ref<boolean>(true)
-
-const queryForm = ref<QueryForm>({
+const queryForm = ref<{
+  name?: string | null
+  page: {
+    num: number
+    size: number
+    total: number
+  }
+}>({
   name: null,
   page: {
     num: 1,
@@ -139,34 +132,35 @@ const queryForm = ref<QueryForm>({
   }
 })
 
+const loading = ref<boolean>(true)
+
 const data = ref<TemplateRecord[]>([])
 
 async function get() {
-  const resp = await TemplateApi.getPageableTemplateList({
-    type: type,
-    ...queryForm.value
-  })
+  loading.value = true
+  const pageNum = queryForm.value.page.num
+  queryForm.value.page.num = pageNum > 0 ? pageNum : 1
+  const [error, resp] = await to(
+    TemplateApi.getPageableTemplateList({
+      type: type,
+      ...queryForm.value
+    })
+  )
+  if (error) {
+    loading.value = false
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
+  loading.value = false
 }
 
-const onClickCreate = async function () {
-  router.push('/template/workbench')
-}
-
-const onClickDelete = async function (id: string) {
-  await TemplateApi.remove(id)
-  message.success('删除成功')
+onMounted(async () => {
   await get()
-  if (data.value.length == 0) {
-    const pageNum = queryForm.value.page.num
-    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
-    await get()
-  }
-}
+})
 
-const onClickEdit = async function (record: TemplateRecord) {
-  router.push('/template/workbench/' + record.id)
+const onClickQuery = async function () {
+  await get()
 }
 
 const onClickClearQueryForm = async function () {
@@ -178,10 +172,6 @@ const onClickClearQueryForm = async function () {
       total: queryForm.value.page.total
     }
   }
-}
-
-const onClickQuery = async function () {
-  await get()
 }
 
 const onClickTemplate = async function (record: TemplateRecord) {
@@ -199,8 +189,29 @@ const onClickMetadata = async function (record: TemplateRecord) {
   })
 }
 
+const onClickEdit = async function (record: TemplateRecord) {
+  router.push('/template/workbench/' + record.id)
+}
+
+const onClickDelete = async function (id: string) {
+  const [error] = await to(TemplateApi.remove(id))
+  if (!error) {
+    message.success('删除成功')
+  }
+  await get()
+  if (data.value.length == 0) {
+    const pageNum = queryForm.value.page.num
+    queryForm.value.page.num = pageNum == 1 ? 1 : pageNum - 1
+    await get()
+  }
+}
+
 const onChangePage = async function () {
   await get()
+}
+
+const onClickCreate = async function () {
+  router.push('/template/workbench')
 }
 </script>
 
@@ -225,5 +236,10 @@ const onChangePage = async function () {
   flex: 1;
   padding: 12px 0;
   text-align: center;
+}
+
+.page-wrapper {
+  display: flex;
+  justify-content: end;
 }
 </style>

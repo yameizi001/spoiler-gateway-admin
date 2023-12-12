@@ -1,10 +1,11 @@
 <template>
-  <div class="element-wrapper">
+  <div class="element-wrapper" :title="element.description ? element.description : ''">
     <a-button
       class="invalid-icon"
       title="注意, 属性值或部分属性值非法"
       type="link"
       danger
+      size="samll"
       :icon="h(ExclamationCircleOutlined)"
       v-show="!valid"
     />
@@ -16,15 +17,17 @@
       @click.stop="onRemoveItem(element, index)"
     />
     <a-image
-      width="48px"
-      height="48px"
+      width="32px"
+      height="32px"
       class="icon-img"
       :preview="false"
       :src="'http://127.0.0.1:8080' + element.icon"
     />
     <div class="primary-info">
-      <div class="primary-info-item" style="font-weight: bold">{{ element.alias }}</div>
-      <div class="primary-info-item">
+      <div class="primary-info-item" style="font-weight: bold" :title="element.alias">
+        {{ element.alias }}
+      </div>
+      <div class="primary-info-item" :title="element.name">
         <a>{{ element.name }}</a>
       </div>
       <a-tag :color="element.ordered ? 'success' : 'warning'" :bordered="false">
@@ -144,8 +147,8 @@ const onRemoveItem = async function (element: ElementRecord, index: number) {
 .element-wrapper {
   position: relative;
   cursor: pointer;
-  width: 196px;
-  height: 128px;
+  width: 160px;
+  height: 96px;
   display: flex;
   flex-direction: row;
   margin: 8px 0 0 8px;
@@ -169,14 +172,17 @@ const onRemoveItem = async function (element: ElementRecord, index: number) {
 }
 
 .primary-info {
+  max-width: 86px;
   display: flex;
   flex-direction: column;
-  margin-left: 12px;
+  margin-left: 6px;
 }
 
 .primary-info-item {
   cursor: pointer;
   flex: 1;
-  margin: 2px 0 2px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

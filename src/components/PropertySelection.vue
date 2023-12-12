@@ -54,6 +54,7 @@ import { onMounted, ref, h } from 'vue'
 import { UnorderedListOutlined, DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import draggable from 'vuedraggable'
+import to from 'await-to-js'
 import PropertyApi from '../api/element/property'
 
 onMounted(async () => {
@@ -81,7 +82,10 @@ const queryForm = ref<{
 const data = ref([])
 
 async function get() {
-  const resp = await PropertyApi.getPageablePropertyList(queryForm.value)
+  const [error, resp] = await to(PropertyApi.getPageablePropertyList(queryForm.value))
+  if (error) {
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
 }

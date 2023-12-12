@@ -4,10 +4,10 @@
       <div class="item-title" @click="onClickTitle(index)">
         <div style="flex: 1">{{ item.title }}</div>
         <template v-if="activeKey === index">
-          <up-outlined />
+          <down-outlined />
         </template>
         <template v-else>
-          <down-outlined />
+          <left-outlined />
         </template>
       </div>
       <transition name="item-content">
@@ -21,7 +21,7 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { UpOutlined, DownOutlined } from '@ant-design/icons-vue'
+import { LeftOutlined, DownOutlined } from '@ant-design/icons-vue'
 
 interface Item {
   title?: string | null

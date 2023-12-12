@@ -186,11 +186,21 @@ import router from '@/router'
 import { message } from 'ant-design-vue'
 import { PlusCircleOutlined, MinusCircleOutlined } from '@ant-design/icons-vue'
 import draggable from 'vuedraggable'
+import to from 'await-to-js'
 import AccordionSidebar from './AccordionSidebar.vue'
 import ElementSelection from './ElementSelection.vue'
 import PropertySelection from './PropertySelection.vue'
 import OperationElementItem from './OperationElementItem.vue'
 import TemplateApi from '../api/template'
+
+const props = defineProps({
+  templateId: String,
+  templateType: {
+    type: String,
+    required: false,
+    default: 'TEMPLATED'
+  }
+})
 
 export interface ElementRecord {
   id: string
@@ -214,42 +224,6 @@ export interface PropertyRecord {
   values: string[]
 }
 
-const props = defineProps({
-  templateId: String,
-  templateType: {
-    type: String,
-    required: false,
-    default: 'TEMPLATED'
-  }
-})
-
-watch(
-  () => props.templateId,
-  async (templateId) => {
-    await get()
-    if (templateId && templateId !== '-1') {
-      templateUpsertForm.value.id = templateId
-    }
-  }
-)
-
-async function get() {
-  if (props.templateId) {
-    const resp = await TemplateApi.getTemplateDetail(props.templateId)
-    templateUpsertForm.value = resp.data
-  }
-}
-
-onMounted(async () => {
-  if (props.templateType) {
-    templateUpsertForm.value.type = props.templateType
-  }
-  if (props.templateType !== 'TEMPLATED') {
-    anchorItem.value.splice(0, 2)
-  }
-  await get()
-})
-
 const selectionCategory = [
   {
     title: '断言器',
@@ -264,6 +238,36 @@ const selectionCategory = [
     key: 'METADATA'
   }
 ]
+
+watch(
+  () => props.templateId,
+  async (templateId) => {
+    await get()
+    if (templateId && templateId !== '-1') {
+      templateUpsertForm.value.id = templateId
+    }
+  }
+)
+
+async function get() {
+  if (props.templateId) {
+    const [error, resp] = await to(TemplateApi.getTemplateDetail(props.templateId))
+    if (error) {
+      return
+    }
+    templateUpsertForm.value = resp.data
+  }
+}
+
+onMounted(async () => {
+  if (props.templateType) {
+    templateUpsertForm.value.type = props.templateType
+  }
+  if (props.templateType !== 'TEMPLATED') {
+    anchorItem.value.splice(0, 2)
+  }
+  await get()
+})
 
 const anchorItem = ref([
   {
@@ -390,9 +394,15 @@ const onSubmitElementPropertiesForm = async function () {
   templateUpsertForm.value.type = props.templateType
   if (props.templateId) {
     templateUpsertForm.value.id = props.templateId
-    await TemplateApi.edit(templateUpsertForm.value)
+    const [error] = await to(TemplateApi.edit(templateUpsertForm.value))
+    if (error) {
+      return
+    }
   } else {
-    await TemplateApi.create(templateUpsertForm.value)
+    const [error] = await to(TemplateApi.create(templateUpsertForm.value))
+    if (error) {
+      return
+    }
   }
   message.success('模板编辑成功')
   router.back()

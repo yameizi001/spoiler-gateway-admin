@@ -51,6 +51,7 @@ import { onMounted, ref, h } from 'vue'
 import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import draggable from 'vuedraggable'
+import to from 'await-to-js'
 import ElementApi from '../api/element/element'
 import SelectionElementItem from './SelectionElementItem.vue'
 
@@ -87,7 +88,10 @@ const data = ref([])
 
 async function get() {
   queryForm.value.type = props.elementType
-  const resp = await ElementApi.getPageableElementList(queryForm.value)
+  const [error, resp] = await to(ElementApi.getPageableElementList(queryForm.value))
+  if (error) {
+    return
+  }
   data.value = resp.data.records
   queryForm.value.page.total = resp.data.total
 }
